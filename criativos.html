@@ -288,6 +288,7 @@ textarea{resize:vertical;min-height:52px;}
   <div class="tabs">
     <button class="tab-btn active" onclick="setTab('criativos',this)">🎬 Criativos</button>
     <button class="tab-btn" onclick="setTab('bibliotecas',this)">📚 Bibliotecas</button>
+    <button class="tab-btn" onclick="setTab('vsl',this)">🎥 VSL</button>
   </div>
 
   <div class="tab-content active" id="tab-criativos">
@@ -387,6 +388,35 @@ textarea{resize:vertical;min-height:52px;}
     <div class="bib-grid" id="bib-grid"></div>
   </div><!-- end tab-bibliotecas -->
 
+  <div class="tab-content" id="tab-vsl">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
+      <div style="font-size:0.76rem;color:var(--text2);">VSLs cadastradas</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+        <select class="sort-select" id="vsl-sort" onchange="vslSortBy=this.value;renderVSLs()">
+          <option value="criadoEm-desc">Recentes primeiro</option>
+          <option value="criadoEm-asc">Antigas primeiro</option>
+          <option value="visitas-desc">Mais visitas</option>
+          <option value="valor-desc">Maior valor $</option>
+          <option value="nome-asc">Nome A-Z</option>
+        </select>
+        <button class="tbtn" id="btn-vsl-filter" onclick="toggleVSLFilter()">⚙ Filtros</button>
+        <button class="btn-add" onclick="abrirModalVSL()">+ Adicionar VSL</button>
+      </div>
+    </div>
+    <div class="fa-panel" id="vsl-filter-panel">
+      <div class="fa-grid">
+        <div class="fa-field"><label>Nicho</label><select id="vsl-f-nicho" onchange="renderVSLs()"><option value="">Todos</option></select></div>
+        <div class="fa-field"><label>Mecanismo</label><input type="text" id="vsl-f-mec" placeholder="buscar..." oninput="renderVSLs()"></div>
+        <div class="fa-field"><label>Visitas mín.</label><input type="number" id="vsl-f-vis" placeholder="ex: 1000" min="0" oninput="renderVSLs()"></div>
+        <div class="fa-field"><label>Valor $ mín.</label><input type="number" id="vsl-f-val" placeholder="ex: 50" min="0" oninput="renderVSLs()"></div>
+        <div class="fa-field"><label>Data de</label><input type="text" id="vsl-f-data-de" placeholder="DD/MM/AAAA" oninput="renderVSLs()"></div>
+        <div class="fa-field"><label>Data até</label><input type="text" id="vsl-f-data-ate" placeholder="DD/MM/AAAA" oninput="renderVSLs()"></div>
+      </div>
+      <div class="fa-actions"><button class="btn-limpar" onclick="limparFiltrosVSL()">Limpar filtros</button></div>
+    </div>
+    <div class="grid" id="vsl-grid"></div>
+  </div><!-- end tab-vsl -->
+
 </main>
 
 <!-- BIB MODAL -->
@@ -442,6 +472,17 @@ textarea{resize:vertical;min-height:52px;}
       <div class="fg"><label>Nome / apelido</label><input type="text" id="fn" placeholder="Ex: Criativo botinha out..."></div>
       <div class="fg"><label>Link do vídeo / anúncio principal</label><input type="url" id="fla" placeholder="https://..."></div>
       <div class="fg">
+        <label>Ou envie do seu PC (upload pro Drive)</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="tbtn" type="button" onclick="document.getElementById('criativo-file-input').click()">📎 Selecionar arquivo</button>
+          <span id="criativo-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
+          <input type="file" id="criativo-file-input" accept="video/*" style="display:none" onchange="uploadCriativoVideo(this)">
+        </div>
+        <div id="criativo-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
+          <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+      <div class="fg">
         <label>Nicho</label>
         <select id="fnicho" onchange="toggleNichoOutro()">
           <option value="">Selecionar...</option>
@@ -494,6 +535,82 @@ textarea{resize:vertical;min-height:52px;}
   <div class="detail-modal" id="detail-modal"></div>
 </div>
 
+<!-- VSL MODAL -->
+<div class="overlay" id="ov-vsl" onclick="if(event.target===this)fecharModalVSL()">
+  <div class="modal" style="max-width:620px;">
+    <div class="mh">
+      <div class="mt" id="vsl-modal-title">Nova VSL</div>
+      <button class="mc" onclick="fecharModalVSL()">×</button>
+    </div>
+    <div id="vsl-drive-warn" style="display:none;background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.35);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.75rem;color:var(--yellow);align-items:center;gap:10px;">
+      ⚠️ Drive não conectado — VSLs só são salvas no Drive.
+      <button onclick="driveAction()" style="background:var(--yellow);color:#0c0c0f;border:none;padding:4px 10px;border-radius:5px;font-family:Syne,sans-serif;font-weight:700;font-size:0.7rem;cursor:pointer;margin-left:auto;">Conectar Drive</button>
+    </div>
+    <div class="fs">
+      <div class="fst">🎥 Vídeo</div>
+      <div class="fg"><label>Link do vídeo (Drive, YouTube, etc)</label><input type="url" id="vsl-link" placeholder="https://..."></div>
+      <div class="fg">
+        <label>Ou envie do seu PC (upload pro Drive)</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="tbtn" type="button" onclick="document.getElementById('vsl-file-input').click()">📎 Selecionar arquivo</button>
+          <span id="vsl-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
+          <input type="file" id="vsl-file-input" accept="video/*" style="display:none" onchange="uploadVSLVideo(this)">
+        </div>
+        <div id="vsl-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
+          <div id="vsl-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fs">
+      <div class="fst">📌 Identificação</div>
+      <div class="fg"><label>Nome da VSL</label><input type="text" id="vsl-nome" placeholder="Ex: VSL Memória v1..."></div>
+      <div class="fr">
+        <div class="fg"><label>Nicho</label>
+          <select id="vsl-nicho" onchange="toggleVSLNichoOutro()">
+            <option value="">Selecionar...</option>
+            <option>Memória</option><option>Weight Loss</option><option>Diabetes</option><option>ED</option><option>Outro</option>
+          </select>
+          <div id="vsl-nicho-outro-wrap" style="display:none;margin-top:7px;"><input type="text" id="vsl-nicho-outro" placeholder="Digite o nicho..."></div>
+        </div>
+        <div class="fg"><label>Data de criação</label>
+          <input type="text" id="vsl-data" placeholder="DD/MM/AAAA" oninput="document.getElementById('vsl-data-hint').textContent=hint(this.value)">
+          <div class="dh" id="vsl-data-hint"></div>
+        </div>
+      </div>
+      <div class="fg"><label>Mecanismo único</label><input type="text" id="vsl-mec" placeholder="Descreva o mecanismo único..."></div>
+    </div>
+    <div class="fs">
+      <div class="fst">📊 Métricas</div>
+      <div class="fr">
+        <div class="fg"><label>Visitas no site</label><input type="number" id="vsl-visitas" placeholder="0" min="0"></div>
+        <div class="fg"><label>Previsão de valor $</label><input type="number" id="vsl-valor" placeholder="0.00" step="0.01" min="0"></div>
+      </div>
+    </div>
+    <div class="fs">
+      <div class="fst">📄 Transcrição</div>
+      <textarea id="vsl-transcricao" placeholder="Cole a transcrição aqui..." style="min-height:120px;"></textarea>
+    </div>
+    <div class="fs">
+      <div class="fst">💬 Observações</div>
+      <textarea id="vsl-obs" placeholder="Qualquer anotação..."></textarea>
+    </div>
+    <button class="btn-save" onclick="salvarVSL()">Salvar VSL ✓</button>
+  </div>
+</div>
+
+<!-- POST-IMPORT MODAL -->
+<div class="overlay" id="ov-post-import" onclick="if(event.target===this)fecharPostImport()">
+  <div class="modal" style="max-width:620px;">
+    <div class="mh">
+      <div class="mt">Upload de vídeos</div>
+      <button class="mc" onclick="fecharPostImport()">×</button>
+    </div>
+    <div style="font-size:0.76rem;color:var(--text2);margin-bottom:14px;">Criativos importados — faça upload dos vídeos ou pule para fazer depois.</div>
+    <div id="post-import-list" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;"></div>
+    <button class="btn-save" style="margin-top:14px;" onclick="fecharPostImport()">Concluir</button>
+  </div>
+</div>
+
 <!-- CONFIRM MODAL -->
 <div class="overlay" id="ov-confirm">
   <div class="confirm-modal">
@@ -511,7 +628,7 @@ textarea{resize:vertical;min-height:52px;}
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 const CLIENT_ID='806452572905-38u7fj9vusf26g1o2l1lg9202oup9in4.apps.googleusercontent.com';
-const SCOPE='https://www.googleapis.com/auth/drive.appdata';
+const SCOPE='https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';
 const FNAME='criativosdb.json';
 
 let criativos=JSON.parse(localStorage.getItem('criativosdb3')||'[]');
@@ -1500,6 +1617,448 @@ function sortBibliotecas(lista){
       default:return 0;
     }
   });
+}
+
+// ── DRIVE FOLDER + UPLOAD ──
+const ROOT_FOLDER_NAME='CriativoDB';
+const folderCache={};
+
+async function getOrCreateFolder(name,parentId){
+  const key=(parentId||'root')+'/'+name;
+  if(folderCache[key])return folderCache[key];
+  const q=parentId
+    ?`name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`
+    :`name='${name}' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false`;
+  const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id)',{
+    headers:{Authorization:'Bearer '+token}
+  });
+  const d=await r.json();
+  if(d.files&&d.files.length){folderCache[key]=d.files[0].id;return d.files[0].id;}
+  const body={name,mimeType:'application/vnd.google-apps.folder'};
+  if(parentId)body.parents=[parentId];
+  const r2=await fetch('https://www.googleapis.com/drive/v3/files',{
+    method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)
+  });
+  const d2=await r2.json();
+  folderCache[key]=d2.id;
+  return d2.id;
+}
+
+async function getFolderForUpload(nicho,tipo){
+  const rootId=await getOrCreateFolder(ROOT_FOLDER_NAME,null);
+  const nichoId=await getOrCreateFolder(nicho||'Sem Nicho',rootId);
+  return await getOrCreateFolder(tipo,nichoId);
+}
+
+function gerarNomeCriativo(file){
+  // read current form values
+  const nicho=document.getElementById('fnicho').value||'';
+  const nichoOutro=document.getElementById('fnicho-outro')?.value||'';
+  const nichoFinal=nicho==='Outro'?nichoOutro:nicho;
+  // copias: sum of all contas
+  const copiaInputs=[...document.querySelectorAll('#cc input[type=number]')];
+  const totalCopias=copiaInputs.reduce((s,el)=>s+(parseInt(el.value)||0),0);
+  // dias: calc from earliest veiculacao date
+  const dataInputs=[...document.querySelectorAll('#cc input[type=text]')];
+  let diasAtivos=0;
+  dataInputs.forEach(el=>{
+    const dt=parseD(el.value);
+    if(dt){const d=dias(dt,new Date());if(d>diasAtivos)diasAtivos=d;}
+  });
+  // adlib
+  const adlib=parseInt(document.getElementById('fqb').value)||0;
+  // varias contas
+  const varias=document.getElementById('tgc').classList.contains('on');
+  const ext=file.name.split('.').pop();
+  let nome=[];
+  if(nichoFinal)nome.push(nichoFinal);
+  if(totalCopias)nome.push(totalCopias+' copias');
+  if(diasAtivos)nome.push(diasAtivos+' dias');
+  if(adlib)nome.push(adlib+' adlib');
+  if(varias)nome.push('varias contas');
+  return(nome.join(' - ')||file.name.replace(/\.[^.]+$/,''))+'.'+ext;
+}
+
+function gerarNomeVSL(file){
+  const nicho=getVSLNicho?getVSLNicho():(document.getElementById('vsl-nicho')?.value||'');
+  const mec=(document.getElementById('vsl-mec')?.value||'').trim();
+  const data=(document.getElementById('vsl-data')?.value||'').trim();
+  const visitas=parseInt(document.getElementById('vsl-visitas')?.value)||0;
+  const valor=parseFloat(document.getElementById('vsl-valor')?.value)||0;
+  const ext=file.name.split('.').pop();
+  let nome=[];
+  if(nicho)nome.push(nicho);
+  if(mec)nome.push(mec);
+  if(data)nome.push(data.replace(/\//g,'-'));
+  if(visitas)nome.push(visitas.toLocaleString()+' visitas');
+  if(valor)nome.push('$'+valor.toLocaleString());
+  return(nome.join(' - ')||file.name.replace(/\.[^.]+$/,''))+'.'+ext;
+}
+
+async function uploadVideoToDrive(file,nicho,tipo,onProgress){
+  if(!token)throw new Error('Drive não conectado');
+  const folderId=await getFolderForUpload(nicho,tipo);
+  const meta={name:file.name,parents:[folderId]};
+  const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','X-Upload-Content-Type':file.type},
+    body:JSON.stringify(meta)
+  });
+  const uploadUrl=r.headers.get('Location');
+  const chunkSize=5*1024*1024;
+  let start=0,fileId=null;
+  while(start<file.size){
+    const end=Math.min(start+chunkSize,file.size);
+    const chunk=file.slice(start,end);
+    const r2=await fetch(uploadUrl,{
+      method:'PUT',
+      headers:{'Content-Range':'bytes '+start+'-'+(end-1)+'/'+file.size,'Content-Type':file.type},
+      body:chunk
+    });
+    if(r2.status===200||r2.status===201){const d=await r2.json();fileId=d.id;}
+    start=end;
+    if(onProgress)onProgress(Math.round((start/file.size)*100));
+  }
+  if(!fileId)throw new Error('Upload falhou');
+  await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'/permissions',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({role:'reader',type:'anyone'})
+  });
+  return'https://drive.google.com/uc?export=preview&id='+fileId;
+}
+
+async function uploadCriativoVideo(input){
+  if(!token){toast('Conecte o Drive primeiro!','err');return;}
+  const file=input.files[0];if(!file)return;
+  const nicho=(document.getElementById('fnicho').value==='Outro'
+    ?document.getElementById('fnicho-outro').value
+    :document.getElementById('fnicho').value)||'Sem Nicho';
+  const nomeArquivo=gerarNomeCriativo(file);
+  const renamedFile=new File([file],nomeArquivo,{type:file.type});
+  const status=document.getElementById('criativo-upload-status');
+  const bar=document.getElementById('criativo-upload-bar');
+  const prog=document.getElementById('criativo-upload-progress');
+  status.textContent='Enviando...';bar.style.display='block';
+  try{
+    const url=await uploadVideoToDrive(renamedFile,nicho,'Criativos',(p)=>{
+      prog.style.width=p+'%';status.textContent='Enviando... '+p+'%';
+    });
+    document.getElementById('fla').value=url;
+    status.textContent='✓ Upload concluído!';bar.style.display='none';
+    toast('Vídeo enviado pro Drive ✓');
+  }catch(e){
+    status.textContent='⚠ Erro: '+e.message;
+    toast('Erro no upload','err');
+  }
+  input.value='';
+}
+
+async function uploadVSLVideo(input){
+  if(!token){toast('Conecte o Drive primeiro!','err');return;}
+  const file=input.files[0];if(!file)return;
+  const nicho=(typeof getVSLNicho==='function'?getVSLNicho():'')||'Sem Nicho';
+  const nomeArquivo=gerarNomeVSL(file);
+  const renamedFile=new File([file],nomeArquivo,{type:file.type});
+  const status=document.getElementById('vsl-upload-status');
+  const bar=document.getElementById('vsl-upload-bar');
+  const prog=document.getElementById('vsl-upload-progress');
+  status.textContent='Enviando...';bar.style.display='block';
+  try{
+    const url=await uploadVideoToDrive(renamedFile,nicho,'VSL',(p)=>{
+      prog.style.width=p+'%';status.textContent=p+'%';
+    });
+    document.getElementById('vsl-link').value=url;
+    status.textContent='✓ Concluído!';bar.style.display='none';
+    toast('Vídeo enviado pro Drive ✓');
+  }catch(e){
+    status.textContent='⚠ '+e.message;
+    toast('Erro no upload','err');
+  }
+  input.value='';
+}
+
+async function uploadPIFile(input,id){
+  if(!token){toast('Conecte o Drive primeiro!','err');return;}
+  const file=input.files[0];if(!file)return;
+  const c=criativos.find(x=>x.id===id);if(!c)return;
+  const status=document.getElementById('pi-status-'+id);
+  status.textContent='0%';
+  // build name from criativo data
+  const m=calcM(c);
+  const ext=file.name.split('.').pop();
+  let partes=[];
+  if(c.nicho)partes.push(c.nicho);
+  if(m.ct)partes.push(m.ct+' copias');
+  if(m.dh)partes.push(m.dh+' dias');
+  if(c.qtdBiblioteca)partes.push(c.qtdBiblioteca+' adlib');
+  if(c.variasContas)partes.push('varias contas');
+  const nomeArquivo=(partes.join(' - ')||c.nome)+'.'+ext;
+  const renamedFile=new File([file],nomeArquivo,{type:file.type});
+  try{
+    const url=await uploadVideoToDrive(renamedFile,c.nicho||'Sem Nicho','Criativos',(p)=>{
+      status.textContent=p+'%';
+    });
+    c.linkAd=url;c.sync=false;
+    salvarLocal();if(token)saveDrive();
+    status.style.color='var(--accent)';status.textContent='✓';
+    const row=document.getElementById('pi-row-'+id);
+    if(row){
+      const btn=row.querySelector('button');
+      if(btn){btn.textContent='🔄 Substituir';btn.onclick=()=>document.getElementById('pi-file-'+id).click();}
+    }
+  }catch(e){
+    status.style.color='var(--red)';status.textContent='⚠ erro';
+    toast('Erro: '+e.message,'err');
+  }
+  input.value='';
+}
+
+// ── VSL ──
+let vsls=[];
+let editVSLId=null;
+let vslSortBy='criadoEm-desc';
+let vslFilterOpen=false;
+
+async function loadVSLs(){
+  if(!token)return;
+  try{
+    const r=await fetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='vslsdb.json'&fields=files(id)",{headers:{Authorization:'Bearer '+token}});
+    const d=await r.json();
+    if(!d.files||!d.files.length)return;
+    const r2=await fetch('https://www.googleapis.com/drive/v3/files/'+d.files[0].id+'?alt=media',{headers:{Authorization:'Bearer '+token}});
+    const data=await r2.json();
+    if(Array.isArray(data)){vsls=data;renderVSLs();}
+  }catch(e){console.error('loadVSLs',e);}
+}
+
+async function saveVSLs(){
+  if(!token)return;
+  try{
+    const content=JSON.stringify(vsls);
+    const r=await fetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='vslsdb.json'&fields=files(id)",{headers:{Authorization:'Bearer '+token}});
+    const d=await r.json();
+    const fid=d.files&&d.files.length?d.files[0].id:null;
+    if(fid){
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fid+'?uploadType=media',{method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:content});
+    }else{
+      const meta={name:'vslsdb.json',parents:['appDataFolder']};
+      const f=new FormData();
+      f.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+      f.append('file',new Blob([content],{type:'application/json'}));
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+token},body:f});
+    }
+  }catch(e){toast('Erro ao salvar VSL','err');}
+}
+
+function toggleVSLNichoOutro(){
+  const v=document.getElementById('vsl-nicho').value;
+  document.getElementById('vsl-nicho-outro-wrap').style.display=v==='Outro'?'block':'none';
+}
+
+function getVSLNicho(){
+  const v=document.getElementById('vsl-nicho').value;
+  if(v==='Outro')return document.getElementById('vsl-nicho-outro').value.trim()||'Outro';
+  return v;
+}
+
+function abrirModalVSL(vsl=null){
+  editVSLId=vsl?vsl.id:null;
+  document.getElementById('vsl-modal-title').textContent=vsl?'Editar VSL':'Nova VSL';
+  document.getElementById('vsl-link').value=vsl?vsl.linkVideo||'':'';
+  document.getElementById('vsl-nome').value=vsl?vsl.nome||'':'';
+  document.getElementById('vsl-mec').value=vsl?vsl.mecanismo||'':'';
+  document.getElementById('vsl-data').value=vsl?vsl.dataCriacao||'':'';
+  document.getElementById('vsl-data-hint').textContent=vsl?hint(vsl.dataCriacao||''):'';
+  document.getElementById('vsl-visitas').value=vsl?vsl.visitas||'':'';
+  document.getElementById('vsl-valor').value=vsl?vsl.valor||'':'';
+  document.getElementById('vsl-transcricao').value=vsl?vsl.transcricao||'':'';
+  document.getElementById('vsl-obs').value=vsl?vsl.obs||'':'';
+  document.getElementById('vsl-upload-status').textContent='';
+  document.getElementById('vsl-upload-bar').style.display='none';
+  document.getElementById('vsl-drive-warn').style.display=token?'none':'flex';
+  const base=['Memória','Weight Loss','Diabetes','ED'];
+  const nv=vsl?vsl.nicho||'':'';
+  if(nv&&!base.includes(nv)){
+    document.getElementById('vsl-nicho').value='Outro';
+    document.getElementById('vsl-nicho-outro').value=nv;
+    document.getElementById('vsl-nicho-outro-wrap').style.display='block';
+  }else{
+    document.getElementById('vsl-nicho').value=nv;
+    document.getElementById('vsl-nicho-outro-wrap').style.display='none';
+  }
+  document.getElementById('ov-vsl').classList.add('open');
+}
+function fecharModalVSL(){document.getElementById('ov-vsl').classList.remove('open');editVSLId=null;}
+
+async function salvarVSL(){
+  if(!token){document.getElementById('vsl-drive-warn').style.display='flex';return;}
+  const nome=document.getElementById('vsl-nome').value.trim();
+  if(!nome){toast('Coloca um nome pra VSL!','err');return;}
+  const vsl={
+    id:editVSLId||Date.now().toString()+Math.random().toString(36).slice(2),
+    nome,nicho:getVSLNicho(),
+    mecanismo:document.getElementById('vsl-mec').value.trim(),
+    dataCriacao:document.getElementById('vsl-data').value.trim(),
+    visitas:parseInt(document.getElementById('vsl-visitas').value)||0,
+    valor:parseFloat(document.getElementById('vsl-valor').value)||0,
+    transcricao:document.getElementById('vsl-transcricao').value.trim(),
+    obs:document.getElementById('vsl-obs').value.trim(),
+    linkVideo:document.getElementById('vsl-link').value.trim(),
+    criadoEm:editVSLId?(vsls.find(v=>v.id===editVSLId)||{}).criadoEm:new Date().toISOString()
+  };
+  if(editVSLId){const i=vsls.findIndex(v=>v.id===editVSLId);vsls[i]=vsl;}
+  else vsls.unshift(vsl);
+  await saveVSLs();
+  fecharModalVSL();renderVSLs();
+  toast('VSL salva ✓');
+}
+
+function deletarVSL(id){
+  const v=vsls.find(x=>x.id===id);if(!v)return;
+  confirmar('Remover "'+v.nome+'"?','Essa ação não pode ser desfeita.',async()=>{
+    vsls=vsls.filter(x=>x.id!==id);
+    await saveVSLs();renderVSLs();toast('VSL removida ✓');
+  });
+}
+
+function toggleVSLFilter(){
+  vslFilterOpen=!vslFilterOpen;
+  document.getElementById('vsl-filter-panel').classList.toggle('open',vslFilterOpen);
+  document.getElementById('btn-vsl-filter').classList.toggle('open',vslFilterOpen);
+}
+
+function limparFiltrosVSL(){
+  ['vsl-f-nicho','vsl-f-mec','vsl-f-vis','vsl-f-val','vsl-f-data-de','vsl-f-data-ate'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  renderVSLs();
+}
+
+function atualizarFiltroVSLNicho(){
+  const sel=document.getElementById('vsl-f-nicho');if(!sel)return;
+  const val=sel.value;
+  const nichos=[...new Set(vsls.map(v=>v.nicho||'').filter(Boolean))];
+  sel.innerHTML='<option value="">Todos</option>'+nichos.map(n=>'<option'+(n===val?' selected':'')+'>'+n+'</option>').join('');
+}
+
+function sortVSLs(lista){
+  return[...lista].sort((a,b)=>{
+    switch(vslSortBy){
+      case'criadoEm-desc':return new Date(b.criadoEm||0)-new Date(a.criadoEm||0);
+      case'criadoEm-asc':return new Date(a.criadoEm||0)-new Date(b.criadoEm||0);
+      case'visitas-desc':return(b.visitas||0)-(a.visitas||0);
+      case'valor-desc':return(b.valor||0)-(a.valor||0);
+      case'nome-asc':return(a.nome||'').localeCompare(b.nome||'');
+      default:return 0;
+    }
+  });
+}
+
+function renderVSLs(){
+  const grid=document.getElementById('vsl-grid');if(!grid)return;
+  atualizarFiltroVSLNicho();
+  const fNicho=document.getElementById('vsl-f-nicho')?.value||'';
+  const fMec=(document.getElementById('vsl-f-mec')?.value||'').toLowerCase().trim();
+  const fVis=parseInt(document.getElementById('vsl-f-vis')?.value)||0;
+  const fVal=parseFloat(document.getElementById('vsl-f-val')?.value)||0;
+  const fDe=parseD(document.getElementById('vsl-f-data-de')?.value||'');
+  const fAte=parseD(document.getElementById('vsl-f-data-ate')?.value||'');
+  let lista=vsls.filter(v=>{
+    if(fNicho&&v.nicho!==fNicho)return false;
+    if(fMec&&!(v.mecanismo||'').toLowerCase().includes(fMec))return false;
+    if(fVis&&(v.visitas||0)<fVis)return false;
+    if(fVal&&(v.valor||0)<fVal)return false;
+    const dt=parseD(v.dataCriacao||'');
+    if(fDe&&dt&&dt<fDe)return false;
+    if(fAte&&dt&&dt>fAte)return false;
+    return true;
+  });
+  lista=sortVSLs(lista);
+  if(!lista.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="big">🎥</div><p>Nenhuma VSL ainda.<br>Clique em <strong>+ Adicionar VSL</strong> para começar!</p></div>';
+    return;
+  }
+  grid.innerHTML=lista.map(v=>{
+    const dt=parseD(v.dataCriacao||'');
+    return'<div class="card" style="cursor:default;">'+
+      '<div class="card-video">'+vidLazy(v.linkVideo)+'</div>'+
+      '<div class="card-body">'+
+        '<div class="card-title">'+esc(v.nome||'Sem nome')+'</div>'+
+        (v.nicho?'<div class="nicho-badge">'+esc(v.nicho)+'</div>':'')+
+        '<div class="metrics" style="margin-top:6px;">'+
+          '<div class="metric"><div class="mlb">👁 Visitas</div><div class="mv">'+(v.visitas?v.visitas.toLocaleString():'—')+'</div></div>'+
+          '<div class="metric"><div class="mlb">💰 Valor $</div><div class="mv p">'+(v.valor?'$'+v.valor.toLocaleString():'—')+'</div></div>'+
+          '<div class="metric"><div class="mlb">📅 Criação</div><div class="mv s">'+(dt?fmt(dt):'—')+'</div></div>'+
+        '</div>'+
+        (v.mecanismo?'<div style="font-size:0.68rem;color:var(--text2);margin:6px 0;"><span style="color:var(--accent2);">⚡</span> '+esc(v.mecanismo)+'</div>':'')+
+        '<div class="card-actions">'+
+          '<button class="bi" onclick="abrirModalVSL(vsls.find(x=>x.id===\"'+v.id+'\"))">✏️ Editar</button>'+
+          '<button class="bi" onclick="verVSL(\"'+v.id+'\")">👁 Ver</button>'+
+          '<button class="bi del" onclick="deletarVSL(\"'+v.id+'\")">🗑️</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function verVSL(id){
+  const v=vsls.find(x=>x.id===id);if(!v)return;
+  const dt=parseD(v.dataCriacao||'');
+  document.getElementById('detail-modal').innerHTML=
+    '<div class="dm-left" style="min-height:200px;">'+vidFull(v.linkVideo)+'</div>'+
+    '<div class="dm-right">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'+
+        '<div>'+(v.nicho?'<div class="nicho-badge" style="margin-bottom:5px;">'+esc(v.nicho)+'</div>':'')+
+        '<div class="dm-title">'+esc(v.nome||'Sem nome')+'</div></div>'+
+        '<button class="mc" onclick="fecharDetalhe()">×</button>'+
+      '</div>'+
+      '<div class="dm-section"><div class="dm-st">📊 Métricas</div><div class="dm-grid">'+
+        '<div class="dm-metric"><div class="mlb">👁 Visitas</div><div class="mv">'+(v.visitas?v.visitas.toLocaleString():'—')+'</div></div>'+
+        '<div class="dm-metric"><div class="mlb">💰 Valor $</div><div class="mv p">'+(v.valor?'$'+v.valor.toLocaleString():'—')+'</div></div>'+
+        '<div class="dm-metric"><div class="mlb">📅 Criação</div><div class="mv s">'+(dt?fmt(dt):'—')+'</div></div>'+
+      '</div></div>'+
+      (v.mecanismo?'<div class="dm-section"><div class="dm-st">⚡ Mecanismo único</div><div style="font-size:0.78rem;color:var(--text);line-height:1.6;">'+esc(v.mecanismo)+'</div></div>':'')+
+      (v.transcricao?'<div class="dm-section"><div class="dm-st">📄 Transcrição</div><div style="font-size:0.74rem;color:var(--text2);line-height:1.7;max-height:220px;overflow-y:auto;white-space:pre-wrap;">'+esc(v.transcricao)+'</div></div>':'')+
+      (v.obs?'<div class="dm-section"><div class="dm-st">💬 Observações</div><div style="font-size:0.76rem;color:var(--text2);line-height:1.6;">'+esc(v.obs)+'</div></div>':'')+
+      '<div style="display:flex;gap:8px;margin-top:14px;">'+
+        '<button class="bi" style="flex:1" onclick="fecharDetalhe();abrirModalVSL(vsls.find(x=>x.id===\"'+v.id+'\"))">✏️ Editar</button>'+
+        '<button class="bi del" style="flex:1" onclick="fecharDetalhe();deletarVSL(\"'+v.id+'\")">🗑️ Remover</button>'+
+      '</div>'+
+    '</div>';
+  document.getElementById('ov-detail').classList.add('open');
+}
+
+// ── POST-IMPORT ──
+function abrirPostImport(ids){
+  const list=document.getElementById('post-import-list');
+  list.innerHTML=ids.map(id=>{
+    const c=criativos.find(x=>x.id===id);if(!c)return'';
+    const hasLink=c.linkAd&&c.linkAd.length>0;
+    const btnLabel=hasLink?'🔄 Substituir':'📎 Enviar vídeo';
+    return`<div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:8px;padding:10px 12px;" id="pi-row-${id}">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.78rem;font-family:Syne,sans-serif;font-weight:700;">${esc(c.nome)}</div>
+        <div style="font-size:0.65rem;color:var(--text2);">${c.codigo||''}${hasLink?' <span style="color:var(--accent)">✓ tem link</span>':''}</div>
+      </div>
+      <button class="tbtn" style="font-size:0.68rem;" data-pid="${id}" onclick="document.getElementById('pi-file-'+this.dataset.pid).click()">${btnLabel}</button>
+      <input type="file" id="pi-file-${id}" accept="video/*" style="display:none" data-pid="${id}" onchange="uploadPIFile(this,this.dataset.pid)">
+      <span id="pi-status-${id}" style="font-size:0.68rem;color:var(--text2);min-width:60px;"></span>
+    </div>`;
+  }).join('');
+  document.getElementById('ov-post-import').classList.add('open');
+}
+function fecharPostImport(){document.getElementById('ov-post-import').classList.remove('open');}
+
+// ── UPDATE setTab ──
+const _origSetTab=setTab;
+function setTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='bibliotecas')renderBibliotecas();
+  if(tab==='vsl'){if(token)loadVSLs();renderVSLs();}
 }
 
 // ── INIT ──
