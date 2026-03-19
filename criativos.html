@@ -219,6 +219,17 @@ textarea{resize:vertical;min-height:52px;}
 .btn-cn:hover{border-color:var(--text2);color:var(--text);}
 
 /* TOAST */
+/* UPLOAD QUEUE */
+.upload-queue{position:fixed;bottom:22px;left:22px;z-index:998;display:flex;flex-direction:column;gap:8px;max-width:320px;pointer-events:none;}
+.upload-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;animation:slideUp 0.2s ease;pointer-events:all;}
+.upload-item.done{border-color:rgba(200,245,66,0.4);}
+.upload-item.error{border-color:rgba(255,77,109,0.4);}
+.upload-item-name{font-size:0.74rem;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.upload-item-bar{background:var(--surface2);border-radius:3px;height:3px;overflow:hidden;}
+.upload-item-progress{height:100%;background:var(--accent);width:0%;transition:width 0.3s;}
+.upload-item.done .upload-item-progress{width:100%;background:var(--accent);}
+.upload-item.error .upload-item-progress{background:var(--red);}
+.upload-item-status{font-size:0.65rem;color:var(--text2);margin-top:3px;}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:0.76rem;z-index:999;opacity:0;transform:translateY(10px);transition:all 0.3s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.ok{border-color:rgba(200,245,66,0.5);color:var(--accent);}
@@ -507,10 +518,23 @@ textarea{resize:vertical;min-height:52px;}
       <button class="bac" onclick="addC()">+ Adicionar conta</button>
     </div>
     <div class="fs">
+      <div class="fst">🎥 VSL vinculada</div>
+      <div class="fg">
+        <label>Qual VSL esse criativo promove? (busque por nome)</label>
+        <input type="text" id="f-vsl-search" placeholder="Digite para buscar VSL..."
+          oninput="renderVSLSugestoes()"
+          onfocus="renderVSLSugestoes()"
+          onblur="setTimeout(()=>{const b=document.getElementById('vsl-sugestoes');if(b)b.style.display='none';},300)"
+          autocomplete="off">
+        <div id="vsl-sugestoes" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-top:4px;display:none;max-height:140px;overflow-y:auto;z-index:10;position:relative;"></div>
+        <div id="vsl-selecionada" style="margin-top:6px;"></div>
+      </div>
+    </div>
+    <div class="fs">
       <div class="fst">🔀 Variações</div>
       <div class="fg">
         <label>Este criativo é variação de... (busque por nome ou código)</label>
-        <input type="text" id="f-var-search" placeholder="Digite nome ou CTV..." oninput="renderVarSugestoes()" onfocus="renderVarSugestoes()" onblur="setTimeout(()=>{const b=document.getElementById('var-sugestoes');if(b)b.style.display='none';},200)" autocomplete="off">
+        <input type="text" id="f-var-search" placeholder="Digite nome ou CTV..." oninput="renderVarSugestoes()" onfocus="renderVarSugestoes()" onblur="setTimeout(()=>{const b=document.getElementById('var-sugestoes');if(b)b.style.display='none';},300)" autocomplete="off">
         <div id="var-sugestoes" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-top:4px;display:none;max-height:150px;overflow-y:auto;"></div>
         <div id="var-selecionados" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;"></div>
       </div>
@@ -519,10 +543,9 @@ textarea{resize:vertical;min-height:52px;}
       <div class="fst">📝 Observações</div>
       <textarea id="fob" placeholder="Qualquer anotação..."></textarea>
     </div>
-    <button class="btn-save" onclick="salvar()">Salvar criativo ✓</button>
-    <div id="criativo-upload-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
-      <div class="fst">📎 Upload do vídeo pro Drive</div>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+    <div class="fs">
+      <div class="fst">📎 Vídeo (upload pro Drive ao salvar)</div>
+      <div style="display:flex;gap:8px;align-items:center;">
         <button class="tbtn" type="button" onclick="document.getElementById('criativo-file-input').click()">📎 Selecionar arquivo</button>
         <span id="criativo-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
         <input type="file" id="criativo-file-input" accept="video/*" style="display:none" onchange="stageCriativoFile(this)">
@@ -531,6 +554,7 @@ textarea{resize:vertical;min-height:52px;}
         <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
       </div>
     </div>
+    <button class="btn-save" onclick="salvar()">Salvar criativo ✓</button>
   </div>
 </div>
 
@@ -628,6 +652,7 @@ textarea{resize:vertical;min-height:52px;}
   </div>
 </div>
 
+<div class="upload-queue" id="upload-queue"></div>
 <div class="toast" id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -824,8 +849,17 @@ async function loadDriveBibs(){
     if(!d.files||!d.files.length)return;
     const r2=await fetch('https://www.googleapis.com/drive/v3/files/'+d.files[0].id+'?alt=media',{headers:{Authorization:'Bearer '+token}});
     const data=await r2.json();
-    if(Array.isArray(data)){
-      bibliotecas=data;
+    if(Array.isArray(data)&&data.length>0){
+      // merge: keep local items not in drive
+      const localOnly=bibliotecas.filter(b=>!data.find(d=>d.id===b.id));
+      bibliotecas=[...data,...localOnly];
+      localStorage.setItem('criativosdb_bibs',JSON.stringify(bibliotecas));
+      renderBibliotecas();
+    } else if(!Array.isArray(data)&&data&&data.data&&Array.isArray(data.data)){
+      // old format with wrapper
+      const arr=data.data;
+      const localOnly=bibliotecas.filter(b=>!arr.find(d=>d.id===b.id));
+      bibliotecas=[...arr,...localOnly];
       localStorage.setItem('criativosdb_bibs',JSON.stringify(bibliotecas));
       renderBibliotecas();
     }
@@ -1122,6 +1156,7 @@ function cardHTML(c){
   const syncDot=!c.sync?`<div class="sync-dot show" title="Não sincronizado com Drive"></div>`:'';
   const nicho=c.nicho?`<div class="nicho-badge">${esc(c.nicho)}</div>`:'';
   const codBadge=c.codigo?`<span class="code-badge" style="margin-right:4px;">${c.codigo}</span>`:'';
+  const vslBadge=(c.vslId&&typeof vsls!=='undefined')?(()=>{const vx=vsls.find(x=>x.id===c.vslId);return vx?'<span class="badge b-dt">🎥 '+esc(vx.nome)+'</span>':'';})():'';
   const hasVar=(c.variacoes||[]).length>0;
   const varBadge=hasVar?`<span class="var-badge">🔀 ${(c.variacoes||[]).length} variação${(c.variacoes||[]).length>1?'ões':''}</span>`:'';
   const bc=c.variasContas?`<span class="badge b-sim">🔁 ${(c.contas||[]).length} contas</span>`:`<span class="badge b-nao">1 conta</span>`;
@@ -1131,7 +1166,7 @@ function cardHTML(c){
   if(c.linkAd)ls.push(`<a class="lc" href="${c.linkAd}" target="_blank" onclick="event.stopPropagation()">🎬 Vídeo</a>`);
   if(c.linkBiblioteca)ls.push(`<a class="lc" href="${c.linkBiblioteca}" target="_blank" onclick="event.stopPropagation()">📚 Bib.</a>`);
   const onclick=bulkMode?`onclick="toggleSel('${c.id}')"`:`onclick="abrirDetalhe('${c.id}')"`;
-  return`<div class="card" data-id="${c.id}" ${onclick}>${chk}${syncDot}<div class="card-video">${vidLazy(c.linkAd)}</div><div class="card-body">${nicho}<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="card-title" style="margin:0;flex:1;">${esc(c.nome||'Sem nome')}</div>${c.codigo?'<span class="code-badge">'+c.codigo+'</span>':''}</div><div class="badges">${bc}${bd}${varBadge}</div><div class="metrics"><div class="metric"><div class="mlb">📋 Cópias total</div><div class="mv">${m.ct||'—'}</div></div><div class="metric"><div class="mlb">📋 Máx/conta</div><div class="mv p">${m.cm||'—'}</div></div><div class="metric"><div class="mlb">🏦 Ads bib.</div><div class="mv">${c.qtdBiblioteca||'—'}</div></div><div class="metric"><div class="mlb">🏢 Contas</div><div class="mv p">${(c.contas||[]).length||'—'}</div></div><div class="metric"><div class="mlb">📅 Veiculação</div><div class="mv s">${m.da?fmt(m.da):'—'}</div></div><div class="metric"><div class="mlb">📅 Dias (cad.)</div><div class="mv ${String(dv).length>3?'s':''}">${dv}</div></div></div>${ls.length?`<div class="card-links">${ls.join('')}</div>`:''}<div class="card-actions"><button class="bi" onclick="event.stopPropagation();editar('${c.id}')">✏️ Editar</button><button class="bi del" onclick="event.stopPropagation();deletar('${c.id}')">🗑️ Remover</button></div></div></div>`;
+  return`<div class="card" data-id="${c.id}" ${onclick}>${chk}${syncDot}<div class="card-video">${vidLazy(c.linkAd)}</div><div class="card-body">${nicho}<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="card-title" style="margin:0;flex:1;">${esc(c.nome||'Sem nome')}</div>${c.codigo?'<span class="code-badge">'+c.codigo+'</span>':''}</div><div class="badges">${bc}${bd}${varBadge}${vslBadge}</div><div class="metrics"><div class="metric"><div class="mlb">📋 Cópias total</div><div class="mv">${m.ct||'—'}</div></div><div class="metric"><div class="mlb">📋 Máx/conta</div><div class="mv p">${m.cm||'—'}</div></div><div class="metric"><div class="mlb">🏦 Ads bib.</div><div class="mv">${c.qtdBiblioteca||'—'}</div></div><div class="metric"><div class="mlb">🏢 Contas</div><div class="mv p">${(c.contas||[]).length||'—'}</div></div><div class="metric"><div class="mlb">📅 Veiculação</div><div class="mv s">${m.da?fmt(m.da):'—'}</div></div><div class="metric"><div class="mlb">📅 Dias (cad.)</div><div class="mv ${String(dv).length>3?'s':''}">${dv}</div></div></div>${ls.length?`<div class="card-links">${ls.join('')}</div>`:''}<div class="card-actions"><button class="bi" onclick="event.stopPropagation();editar('${c.id}')">✏️ Editar</button><button class="bi del" onclick="event.stopPropagation();deletar('${c.id}')">🗑️ Remover</button></div></div></div>`;
 }
 
 function vidLazy(url){
@@ -1140,7 +1175,7 @@ function vidLazy(url){
   if(url.includes('drive.google.com')){
     const m=url.match(/[?&]id=([^&]+)/);
     const id2=m?m[1]:null;
-    if(id2)return`<iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen loading="lazy" style="width:100%;height:100%;border:none;"></iframe>`;
+    if(id2)return`<div class="vph" style="cursor:pointer;" onclick="event.stopPropagation();window.open('${url}','_blank')"><div class="icon">☁️</div><span style="font-size:0.65rem;text-align:center;">Google Drive<br><span style="color:var(--accent2);">clique para abrir ↗</span></span></div>`;
   }
   if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
     return`<video class="lazy-vid" preload="none" muted playsinline
@@ -1267,6 +1302,53 @@ function foraDetail(e){if(e.target===document.getElementById('ov-detail'))fechar
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ── VARIAÇÕES ──
+function renderVSLSugestoes(){
+  const q=(document.getElementById('f-vsl-search')?.value||'').toLowerCase().trim();
+  const box=document.getElementById('vsl-sugestoes');
+  if(!box)return;
+  const words=q?q.split(/\s+/).filter(Boolean):[];
+  const pool=(typeof vsls!=='undefined'?vsls:[]).filter(v=>{
+    if(!words.length)return true;
+    return words.every(w=>((v.nome||'')+(v.nicho||'')+(v.mecanismo||'')).toLowerCase().includes(w));
+  }).slice(0,6);
+  if(!pool.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=pool.map(v=>
+    `<div onclick="selecionarVSL('${v.id}')" style="padding:7px 10px;cursor:pointer;font-size:0.78rem;border-bottom:1px solid var(--border);">
+      ${v.nicho?`<span class="nicho-badge" style="margin-right:5px;">${esc(v.nicho)}</span>`:''}
+      ${esc(v.nome||'Sem nome')}
+    </div>`
+  ).join('');
+}
+
+function selecionarVSL(id){
+  const v=(typeof vsls!=='undefined'?vsls:[]).find(x=>x.id===id);
+  if(!v)return;
+  const box=document.getElementById('vsl-sugestoes');
+  const sel=document.getElementById('vsl-selecionada');
+  const inp=document.getElementById('f-vsl-search');
+  if(box)box.style.display='none';
+  if(inp)inp.value='';
+  if(sel)sel.innerHTML=`<span style="display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:0.72rem;">
+    🎥 ${esc(v.nome)}
+    <button onclick="limparVSLSelecionada()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:0.9rem;line-height:1;">×</button>
+  </span>`;
+  // store selected vsl id
+  if(inp)inp.dataset.selectedVslId=id;
+}
+
+function limparVSLSelecionada(){
+  const inp=document.getElementById('f-vsl-search');
+  const sel=document.getElementById('vsl-selecionada');
+  if(inp){inp.value='';delete inp.dataset.selectedVslId;}
+  if(sel)sel.innerHTML='';
+}
+
+function getSelectedVSLId(){
+  const inp=document.getElementById('f-vsl-search');
+  return inp?inp.dataset.selectedVslId||null:null;
+}
+
 function renderVarSugestoes(){
   const q=document.getElementById('f-var-search').value.toLowerCase().trim();
   const box=document.getElementById('var-sugestoes');
@@ -1334,6 +1416,9 @@ function abrirModal(c=null){
   renderVarSelecionados();
   renderC();
   const fw=document.getElementById('form-drive-warn');if(fw)fw.style.display='none';
+  // load VSL selection
+  limparVSLSelecionada();
+  if(c&&c.vslId){selecionarVSL(c.vslId);}
   const upSec=document.getElementById('criativo-upload-section');if(upSec)upSec.style.display='none';
   document.getElementById('ov').classList.add('open');
 }
@@ -1378,6 +1463,7 @@ function salvar(){
     codigo:existente?existente.codigo:gerarCodigo(),
     nome,nicho,
     linkAd:document.getElementById('fla').value.trim(),
+    vslId:getSelectedVSLId(),
     linkBiblioteca:document.getElementById('flb').value.trim(),
     qtdBiblioteca:document.getElementById('fqb').value,
     variasContas:variasC,
@@ -1414,15 +1500,10 @@ function salvar(){
   else criativos.unshift(cr);
   if(!token)mostrarAviso('form-drive-warn');
   save(cr);
-  if(_stagedCriativoFile){
-    executarUploadCriativo(cr).then(()=>{
-      const idx=criativos.findIndex(x=>x.id===cr.id);
-      if(idx>=0){criativos[idx].linkAd=cr.linkAd;criativos[idx].sync=false;salvarLocal();if(token)saveDrive();}
-      render();
-    });
-  }
   fecharModal();
   render();
+  // start background upload if staged
+  if(_stagedCriativoFile) executarUploadCriativo(cr);
 }
 
 function editar(id){const c=criativos.find(x=>x.id===id);if(c)abrirModal(c);}
@@ -1625,6 +1706,53 @@ function importarBibliotecasDoJSON(lista){
 }
 
 // ── VARIAÇÕES ──
+
+function renderVSLSugestoes(){
+  const q=(document.getElementById('f-vsl-search')?.value||'').toLowerCase().trim();
+  const box=document.getElementById('vsl-sugestoes');
+  if(!box)return;
+  const words=q?q.split(/\s+/).filter(Boolean):[];
+  const pool=(typeof vsls!=='undefined'?vsls:[]).filter(v=>{
+    if(!words.length)return true;
+    return words.every(w=>((v.nome||'')+(v.nicho||'')+(v.mecanismo||'')).toLowerCase().includes(w));
+  }).slice(0,6);
+  if(!pool.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=pool.map(v=>
+    `<div onclick="selecionarVSL('${v.id}')" style="padding:7px 10px;cursor:pointer;font-size:0.78rem;border-bottom:1px solid var(--border);">
+      ${v.nicho?`<span class="nicho-badge" style="margin-right:5px;">${esc(v.nicho)}</span>`:''}
+      ${esc(v.nome||'Sem nome')}
+    </div>`
+  ).join('');
+}
+
+function selecionarVSL(id){
+  const v=(typeof vsls!=='undefined'?vsls:[]).find(x=>x.id===id);
+  if(!v)return;
+  const box=document.getElementById('vsl-sugestoes');
+  const sel=document.getElementById('vsl-selecionada');
+  const inp=document.getElementById('f-vsl-search');
+  if(box)box.style.display='none';
+  if(inp)inp.value='';
+  if(sel)sel.innerHTML=`<span style="display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:0.72rem;">
+    🎥 ${esc(v.nome)}
+    <button onclick="limparVSLSelecionada()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:0.9rem;line-height:1;">×</button>
+  </span>`;
+  // store selected vsl id
+  if(inp)inp.dataset.selectedVslId=id;
+}
+
+function limparVSLSelecionada(){
+  const inp=document.getElementById('f-vsl-search');
+  const sel=document.getElementById('vsl-selecionada');
+  if(inp){inp.value='';delete inp.dataset.selectedVslId;}
+  if(sel)sel.innerHTML='';
+}
+
+function getSelectedVSLId(){
+  const inp=document.getElementById('f-vsl-search');
+  return inp?inp.dataset.selectedVslId||null:null;
+}
 
 function renderVarSugestoes(){
   const q = document.getElementById('f-var-search').value.toLowerCase().trim();
@@ -1850,44 +1978,80 @@ async function uploadVideoToDrive(file,nicho,tipo,onProgress){
 let _stagedCriativoFile = null;
 let _stagedVSLFile = null;
 
+// ── UPLOAD QUEUE (background) ──
+const uploadQueue = [];
+
+function addToUploadQueue(label, uploadFn) {
+  const id = 'uq-' + Date.now();
+  const item = { id, label, done: false, error: false };
+  uploadQueue.push(item);
+  renderUploadQueue();
+
+  uploadFn((progress) => {
+    item.progress = progress;
+    renderUploadQueue();
+  }).then(url => {
+    item.done = true;
+    item.url = url;
+    renderUploadQueue();
+    setTimeout(() => {
+      const idx = uploadQueue.indexOf(item);
+      if (idx >= 0) uploadQueue.splice(idx, 1);
+      renderUploadQueue();
+    }, 4000);
+  }).catch(e => {
+    item.error = true;
+    item.errorMsg = e.message;
+    renderUploadQueue();
+    setTimeout(() => {
+      const idx = uploadQueue.indexOf(item);
+      if (idx >= 0) uploadQueue.splice(idx, 1);
+      renderUploadQueue();
+    }, 6000);
+  });
+
+  return id;
+}
+
+function renderUploadQueue() {
+  const q = document.getElementById('upload-queue');
+  if (!q) return;
+  if (!uploadQueue.length) { q.innerHTML = ''; return; }
+  q.innerHTML = uploadQueue.map(item => `
+    <div class="upload-item${item.done?' done':item.error?' error':''}">
+      <div class="upload-item-name">📎 ${esc(item.label)}</div>
+      <div class="upload-item-bar"><div class="upload-item-progress" style="width:${item.done?100:item.progress||0}%"></div></div>
+      <div class="upload-item-status">${item.done?'✓ Enviado!':item.error?'⚠ '+item.errorMsg:(item.progress||0)+'%'}</div>
+    </div>`).join('');
+}
+
 function stageCriativoFile(input){
   const file = input.files[0]; if(!file) return;
   _stagedCriativoFile = file;
   const status = document.getElementById('criativo-upload-status');
-  status.textContent = '📎 ' + file.name + ' (será enviado ao salvar)';
-  status.style.color = 'var(--accent)';
+  if(status){ status.textContent = '📎 ' + file.name; status.style.color = 'var(--accent)'; }
 }
 
 async function uploadCriativoVideo(input){
-  // kept for backward compat - stages the file
   stageCriativoFile(input);
 }
 
-async function executarUploadCriativo(cr){
-  if(!_stagedCriativoFile) return;
-  if(!token){ toast('Conecte o Drive para fazer upload do vídeo','warn'); return; }
-  const nicho = cr.nicho || 'Sem Nicho';
-  const nomeArquivo = gerarNomeCriativoFromCr(cr, _stagedCriativoFile);
-  const renamedFile = new File([_stagedCriativoFile], nomeArquivo, {type: _stagedCriativoFile.type});
-  const status = document.getElementById('criativo-upload-status');
-  const bar = document.getElementById('criativo-upload-bar');
-  const prog = document.getElementById('criativo-upload-progress');
-  if(status){ status.textContent='Enviando...'; status.style.color='var(--text2)'; }
-  if(bar) bar.style.display='block';
-  try{
-    const url = await uploadVideoToDrive(renamedFile, nicho, 'Criativos', (p)=>{
-      if(prog) prog.style.width=p+'%';
-      if(status) status.textContent='Enviando... '+p+'%';
-    });
-    cr.linkAd = url;
-    if(status){ status.textContent='✓ Enviado!'; }
-    if(bar) bar.style.display='none';
-    toast('Vídeo enviado pro Drive ✓');
-  }catch(e){
-    if(status) status.textContent='⚠ Erro: '+e.message;
-    toast('Erro no upload: '+e.message,'err');
-  }
+function executarUploadCriativo(cr){
+  if(!_stagedCriativoFile) return Promise.resolve();
+  if(!token){ toast('Conecte o Drive para fazer upload do vídeo','warn'); return Promise.resolve(); }
+  const file = _stagedCriativoFile;
   _stagedCriativoFile = null;
+  const nicho = cr.nicho || 'Sem Nicho';
+  const nomeArquivo = gerarNomeCriativoFromCr(cr, file);
+  const renamedFile = new File([file], nomeArquivo, {type: file.type});
+  const status = document.getElementById('criativo-upload-status');
+  if(status){ status.textContent='Enviando em background...'; status.style.color='var(--text2)'; }
+  return new Promise((resolve) => {
+    addToUploadQueue(nomeArquivo, (onProgress) =>
+      uploadVideoToDrive(renamedFile, nicho, 'Criativos', onProgress)
+    );
+    resolve();
+  });
 }
 
 function stageVSLFile(input){
@@ -1902,31 +2066,26 @@ async function uploadVSLVideo(input){
   stageVSLFile(input);
 }
 
-async function executarUploadVSL(vsl){
-  if(!_stagedVSLFile) return;
-  if(!token){ toast('Conecte o Drive para fazer upload do vídeo','warn'); return; }
-  const nicho = vsl.nicho || 'Sem Nicho';
-  const nomeArquivo = gerarNomeVSLFromVsl(vsl, _stagedVSLFile);
-  const renamedFile = new File([_stagedVSLFile], nomeArquivo, {type: _stagedVSLFile.type});
-  const status = document.getElementById('vsl-upload-status');
-  const bar = document.getElementById('vsl-upload-bar');
-  const prog = document.getElementById('vsl-upload-progress');
-  if(status){ status.textContent='Enviando...'; status.style.color='var(--text2)'; }
-  if(bar) bar.style.display='block';
-  try{
-    const url = await uploadVideoToDrive(renamedFile, nicho, 'VSL', (p)=>{
-      if(prog) prog.style.width=p+'%';
-      if(status) status.textContent=p+'%';
-    });
-    vsl.linkVideo = url;
-    if(status){ status.textContent='✓ Enviado!'; }
-    if(bar) bar.style.display='none';
-    toast('Vídeo enviado pro Drive ✓');
-  }catch(e){
-    if(status) status.textContent='⚠ '+e.message;
-    toast('Erro no upload: '+e.message,'err');
-  }
+function executarUploadVSL(vsl){
+  if(!_stagedVSLFile) return Promise.resolve();
+  if(!token){ toast('Conecte o Drive para fazer upload do vídeo','warn'); return Promise.resolve(); }
+  const file = _stagedVSLFile;
   _stagedVSLFile = null;
+  const nicho = vsl.nicho || 'Sem Nicho';
+  const nomeArquivo = gerarNomeVSLFromVsl(vsl, file);
+  const renamedFile = new File([file], nomeArquivo, {type: file.type});
+  const status = document.getElementById('vsl-upload-status');
+  if(status){ status.textContent='Enviando em background...'; status.style.color='var(--text2)'; }
+  // add to background queue and update vsl.linkVideo when done
+  addToUploadQueue(nomeArquivo, (onProgress) =>
+    uploadVideoToDrive(renamedFile, nicho, 'VSL', onProgress).then(url => {
+      vsl.linkVideo = url;
+      saveVSLs();
+      renderVSLs();
+      return url;
+    })
+  );
+  return Promise.resolve();
 }
 
 async function uploadPIFile(input,id){
@@ -2068,9 +2227,9 @@ async function salvarVSL(){
   };
   if(editVSLId){const i=vsls.findIndex(v=>v.id===editVSLId);vsls[i]=vsl;}
   else vsls.unshift(vsl);
-  // upload staged video if any
-  if(_stagedVSLFile) await executarUploadVSL(vsl);
   await saveVSLs();
+  // start background upload if staged
+  if(_stagedVSLFile) executarUploadVSL(vsl);
   fecharModalVSL();renderVSLs();
   toast('VSL salva ✓');
 }
