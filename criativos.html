@@ -240,6 +240,8 @@ textarea{resize:vertical;min-height:52px;}
       <div class="drive-dot"></div>
       <span id="dlbl">Conectar Drive</span>
     </div>
+    <button class="tbtn" onclick="document.getElementById('import-input').click()" title="Importar JSON">⬆ Importar</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importarJSON(this)">
     <button class="btn-add" onclick="abrirModal()">+ Adicionar</button>
   </div>
 </header>
@@ -668,6 +670,65 @@ function deletarSelecionados(){if(!selecionados.size)return;confirmar(`Deletar $
 let confirmCb=null;
 function confirmar(titulo,msg,cb){confirmCb=cb;document.getElementById('confirm-title').textContent=titulo;document.getElementById('confirm-msg').textContent=msg;document.getElementById('confirm-yes').onclick=()=>{fecharConfirm();if(confirmCb)confirmCb();};document.getElementById('ov-confirm').classList.add('open');}
 function fecharConfirm(){document.getElementById('ov-confirm').classList.remove('open');}
+
+// ── IMPORT ──
+function importarJSON(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const lista = data.criativos || (Array.isArray(data) ? data : null);
+      if(!lista) { toast('JSON inválido — esperava {"criativos":[...]}', 'err'); return; }
+
+      let importados = 0;
+      lista.forEach(c => {
+        const contas = (c.contas || []).map(ct => ({
+          linkAnuncio: ct.linkAnuncio || ct.link_conta || '',
+          copias: String(ct.copias || ''),
+          dataVeiculacao: converterData(ct.veiculacao || ct.dataVeiculacao || ''),
+          nome: ct.nome || ''
+        }));
+
+        const criativo = {
+          id: Date.now().toString() + Math.random().toString(36).slice(2),
+          nome: c.nome || 'Sem nome',
+          nicho: c.nicho || '',
+          linkAd: c.link_video || c.linkAd || '',
+          linkBiblioteca: c.biblioteca ? c.biblioteca.link : (c.linkBiblioteca || ''),
+          qtdBiblioteca: c.biblioteca ? String(c.biblioteca.numero_ads || '') : String(c.qtdBiblioteca || ''),
+          variasContas: c.variasContas !== undefined ? c.variasContas : contas.length > 1,
+          contas,
+          obs: c.obs || '',
+          criadoEm: new Date().toISOString(),
+          sync: false
+        };
+        criativos.unshift(criativo);
+        importados++;
+      });
+
+      salvarLocal();
+      if(token) saveDrive();
+      render();
+      toast(importados + ' criativo' + (importados !== 1 ? 's' : '') + ' importado' + (importados !== 1 ? 's' : '') + ' ✓');
+      input.value = '';
+    } catch(err) {
+      toast('Erro ao ler JSON: ' + err.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function converterData(s){
+  if(!s) return '';
+  // already DD/MM/YYYY
+  if(/^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(s)) return s;
+  // YYYY-MM-DD
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[3]+'/'+m[2]+'/'+m[1];
+  return s;
+}
 
 // ── RENDER ──
 function render(){
