@@ -228,6 +228,39 @@ textarea{resize:vertical;min-height:52px;}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* TABS */
+.tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;}
+.tab-btn{flex:1;padding:8px 16px;border:none;border-radius:7px;background:none;color:var(--text2);font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;transition:all 0.2s;}
+.tab-btn.active{background:var(--accent2);color:white;}
+.tab-btn:hover:not(.active){color:var(--text);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* CODE BADGE */
+.code-badge{font-size:0.6rem;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;letter-spacing:0.05em;}
+
+/* VARIATION BADGE */
+.var-badge{display:inline-flex;align-items:center;gap:4px;font-size:0.6rem;padding:2px 7px;border-radius:20px;background:rgba(123,92,250,0.1);color:var(--accent2);border:1px solid rgba(123,92,250,0.3);}
+
+/* BIBLIOTECA CARDS */
+.bib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.bib-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:all 0.2s;animation:fadeIn 0.3s ease;}
+.bib-card:hover{border-color:var(--accent2);box-shadow:0 4px 20px rgba(123,92,250,0.1);}
+.bib-nome{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:4px;}
+.bib-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
+.bib-ads{font-family:'Syne',sans-serif;font-weight:700;font-size:1.4rem;color:var(--accent);}
+.bib-ads-label{font-size:0.65rem;color:var(--text2);}
+.bib-hist{margin-top:10px;border-top:1px solid var(--border);padding-top:8px;}
+.bib-hist-title{font-size:0.62rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+.bib-hist-item{display:flex;justify-content:space-between;font-size:0.7rem;padding:3px 0;border-bottom:1px solid var(--border);}
+.bib-hist-item:last-child{border-bottom:none;}
+.bib-hist-num{font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);}
+.bib-hist-date{color:var(--text2);}
+.bib-fire{color:#ff6b35;font-size:0.75rem;}
+.bib-actions{display:flex;gap:6px;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
+.bib-criativos{font-size:0.68rem;color:var(--accent2);margin-bottom:8px;}
+.bib-obs{font-size:0.7rem;color:var(--text2);margin-bottom:8px;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -248,10 +281,16 @@ textarea{resize:vertical;min-height:52px;}
 
 <main>
   <div class="drive-warning" id="drive-warning">
-    ⚠️ Você não está conectado ao Drive. Seus dados estão salvos localmente, mas não sincronizados.
+    ⚠️ Não conectado ao Drive. Dados salvos localmente.
     <button onclick="driveAction()">Conectar agora</button>
   </div>
 
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('criativos',this)">🎬 Criativos</button>
+    <button class="tab-btn" onclick="setTab('bibliotecas',this)">📚 Bibliotecas</button>
+  </div>
+
+  <div class="tab-content active" id="tab-criativos">
   <div class="toolbar">
     <input type="text" class="search-box" placeholder='Buscar... (use "aspas" para frase exata)' oninput="render()" id="si">
     <button class="tbtn" id="bfa" onclick="toggleFA()">⚙ Filtros</button>
@@ -299,14 +338,14 @@ textarea{resize:vertical;min-height:52px;}
       <div class="fa-field"><label>Nicho</label>
         <select id="f0" onchange="render()">
           <option value="">Todos</option>
-          <option>Memória</option>
-          <option>Weight Loss</option>
-          <option>Diabetes</option>
-          <option>ED</option>
-          <option>Outro</option>
         </select>
       </div>
-      <div class="fa-field"><label>Várias contas?</label>
+      <div class="fa-field"><label>Biblioteca</label>
+        <select id="f-bib" onchange="render()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="fa-field" style="display:none"><label>x</label>
         <select id="f-contas-tipo" onchange="render()">
           <option value="">Todos</option>
           <option value="varias">Várias contas</option>
@@ -326,7 +365,58 @@ textarea{resize:vertical;min-height:52px;}
   <div class="grid" id="grid"></div>
   <div class="sentinel" id="sentinel"></div>
   <div class="pagination" id="pagination"></div>
+  </div><!-- end tab-criativos -->
+
+  <div class="tab-content" id="tab-bibliotecas">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:0.76rem;color:var(--text2);">Bibliotecas monitoradas</div>
+      <button class="btn-add" onclick="abrirModalBib()">+ Adicionar biblioteca</button>
+    </div>
+    <div class="bib-grid" id="bib-grid"></div>
+  </div><!-- end tab-bibliotecas -->
+
 </main>
+
+<!-- BIB MODAL -->
+<div class="overlay" id="ov-bib" onclick="foraBib(event)">
+  <div class="modal">
+    <div class="mh">
+      <div class="mt" id="bib-modal-title">Nova Biblioteca</div>
+      <button class="mc" onclick="fecharModalBib()">×</button>
+    </div>
+    <div class="fs">
+      <div class="fst">🔗 Link da biblioteca</div>
+      <div class="fg"><label>Cole o link completo do Facebook Ads Library</label>
+        <input type="url" id="bib-link" placeholder="https://www.facebook.com/ads/library/?..." oninput="previewBibNome()">
+        <div style="font-size:0.65rem;color:var(--accent);margin-top:4px;" id="bib-nome-preview"></div>
+      </div>
+    </div>
+    <div class="fs">
+      <div class="fst">📊 Número de ads atual</div>
+      <div class="fg"><input type="number" id="bib-ads" placeholder="ex: 8500" min="0"></div>
+    </div>
+    <div class="fs">
+      <div class="fst">📝 Observação</div>
+      <textarea id="bib-obs" placeholder="Notas sobre essa biblioteca..."></textarea>
+    </div>
+    <button class="btn-save" onclick="salvarBib()">Salvar biblioteca ✓</button>
+  </div>
+</div>
+
+<!-- UPDATE ADS MODAL -->
+<div class="overlay" id="ov-update-ads" onclick="foraUpdateAds(event)">
+  <div class="modal" style="max-width:380px;">
+    <div class="mh">
+      <div class="mt" id="update-ads-nome">Atualizar ads</div>
+      <button class="mc" onclick="fecharUpdateAds()">×</button>
+    </div>
+    <div class="fg">
+      <label>Novo número de ads</label>
+      <input type="number" id="update-ads-val" placeholder="ex: 12000" min="0">
+    </div>
+    <button class="btn-save" style="margin-top:12px;" onclick="confirmarUpdateAds()">Salvar ✓</button>
+  </div>
+</div>
 
 <!-- FORM MODAL -->
 <div class="overlay" id="ov" onclick="foraForm(event)">
@@ -369,6 +459,15 @@ textarea{resize:vertical;min-height:52px;}
       </div>
       <div id="cc"></div>
       <button class="bac" onclick="addC()">+ Adicionar conta</button>
+    </div>
+    <div class="fs">
+      <div class="fst">🔀 Variações</div>
+      <div class="fg">
+        <label>Este criativo é variação de... (busque por nome ou código)</label>
+        <input type="text" id="f-var-search" placeholder="Digite nome ou CTV..." oninput="renderVarSugestoes()" autocomplete="off">
+        <div id="var-sugestoes" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-top:4px;display:none;max-height:150px;overflow-y:auto;"></div>
+        <div id="var-selecionados" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;"></div>
+      </div>
     </div>
     <div class="fs">
       <div class="fst">📝 Observações</div>
@@ -430,7 +529,7 @@ function capturarThumb(url,id){
   },{once:true});
   v.addEventListener('error',()=>{v.src='';},{once:true});
 }
-let editId=null,variasC=false,contas=[];
+let editId=null,variasC=false,contas=[],varSelecionados=new Set();
 let op='E',faOpen=false;
 let bulkMode=false,selecionados=new Set();
 let token=null,fileId=null,tclient=null;
@@ -594,6 +693,7 @@ function atualizarFiltroNicho(){
 function getFAV(){
   return{
     n:document.getElementById('f0').value||null,
+    bib:document.getElementById('f-bib').value||null,
     c1:parseInt(document.getElementById('f1').value)||null,
     c2:parseInt(document.getElementById('f2').value)||null,
     c3:parseInt(document.getElementById('f3').value)||null,
@@ -602,10 +702,11 @@ function getFAV(){
     c6:parseInt(document.getElementById('f6').value)||null
   };
 }
-function faAtivo(){const v=getFAV();return v.n||v.ct||Object.entries(v).filter(([k])=>!['n','ct'].includes(k)).some(([,x])=>x!==null);}
+function faAtivo(){const v=getFAV();return!!(v.n||v.bib||v.c1!==null||v.c2!==null||v.c3!==null||v.c4!==null||v.c5!==null||v.c6!==null);}
 function passFA(c){
   const v=getFAV();const m=calcM(c);const ch=[];
   if(v.n){const cn=c.nicho||'';const base=['Memória','Weight Loss','Diabetes','ED'];const match=v.n==='Outro'?(!base.includes(cn)&&cn!==''):cn===v.n;ch.push(match);}
+  if(v.bib)ch.push(c.linkBiblioteca===v.bib);
   if(v.c1!==null)ch.push(m.cm>=v.c1);
   if(v.c2!==null)ch.push(m.ct>=v.c2);
   if(v.c3!==null)ch.push((parseInt(c.qtdBiblioteca)||0)>=v.c3);
@@ -617,7 +718,7 @@ function passFA(c){
 }
 function setOp(o){op=o;document.getElementById('ope').classList.toggle('active',o==='E');document.getElementById('opou').classList.toggle('active',o==='OU');render();}
 function toggleFA(){faOpen=!faOpen;document.getElementById('fap').classList.toggle('open',faOpen);document.getElementById('bfa').classList.toggle('open',faOpen);}
-function limparFA(){['f1','f2','f3','f4','f5','f6'].forEach(id=>document.getElementById(id).value='');document.getElementById('f0').value='';render();}
+function limparFA(){['f1','f2','f3','f4','f5','f6'].forEach(id=>document.getElementById(id).value='');document.getElementById('f0').value='';document.getElementById('f-bib').value='';render();}
 
 // ── SORT ──
 function sortLista(lista){
@@ -710,8 +811,11 @@ function importarJSON(input){
 
       salvarLocal();
       if(token) saveDrive();
+      gerarCodigosFaltantes();
+      const novasBibs=importarBibliotecasDoJSON(lista);
       render();
-      toast(importados + ' criativo' + (importados !== 1 ? 's' : '') + ' importado' + (importados !== 1 ? 's' : '') + ' ✓');
+      const bibMsg=novasBibs?' + '+novasBibs+' biblioteca'+(novasBibs>1?'s':''):'';
+      toast(importados + ' criativo' + (importados !== 1 ? 's' : '') + bibMsg + ' importado' + (importados !== 1 ? 's' : '') + ' ✓');
       input.value = '';
     } catch(err) {
       toast('Erro ao ler JSON: ' + err.message, 'err');
@@ -733,6 +837,8 @@ function converterData(s){
 // ── RENDER ──
 function render(){
   atualizarFiltroNicho();
+  atualizarFiltroBib();
+  atualizarFiltroBib();
   const grid=document.getElementById('grid');
   const raw=document.getElementById('si').value.trim();
   let lista=criativos.filter(c=>matchSearch(c,raw)&&(!faAtivo()||passFA(c)));
@@ -826,6 +932,9 @@ function cardHTML(c){
   const chk=bulkMode?`<input type="checkbox" class="card-check" ${selecionados.has(c.id)?'checked':''} onclick="event.stopPropagation();toggleSel('${c.id}')">`:'' ;
   const syncDot=!c.sync?`<div class="sync-dot show" title="Não sincronizado com Drive"></div>`:'';
   const nicho=c.nicho?`<div class="nicho-badge">${esc(c.nicho)}</div>`:'';
+  const codBadge=c.codigo?`<span class="code-badge" style="margin-right:4px;">${c.codigo}</span>`:'';
+  const hasVar=(c.variacoes||[]).length>0;
+  const varBadge=hasVar?`<span class="var-badge">🔀 ${(c.variacoes||[]).length} variação${(c.variacoes||[]).length>1?'ões':''}</span>`:'';
   const bc=c.variasContas?`<span class="badge b-sim">🔁 ${(c.contas||[]).length} contas</span>`:`<span class="badge b-nao">1 conta</span>`;
   const bd=m.da?`<span class="badge b-dt">📅 ${fmt(m.da)}</span>`:'';
   const dv=m.dc!==null?m.dc:'—';const dhv=m.dh!==null?m.dh:'—';
@@ -833,7 +942,7 @@ function cardHTML(c){
   if(c.linkAd)ls.push(`<a class="lc" href="${c.linkAd}" target="_blank" onclick="event.stopPropagation()">🎬 Vídeo</a>`);
   if(c.linkBiblioteca)ls.push(`<a class="lc" href="${c.linkBiblioteca}" target="_blank" onclick="event.stopPropagation()">📚 Bib.</a>`);
   const onclick=bulkMode?`onclick="toggleSel('${c.id}')"`:`onclick="abrirDetalhe('${c.id}')"`;
-  return`<div class="card" data-id="${c.id}" ${onclick}>${chk}${syncDot}<div class="card-video">${vidLazy(c.linkAd)}</div><div class="card-body">${nicho}<div class="card-title">${esc(c.nome||'Sem nome')}</div><div class="badges">${bc}${bd}</div><div class="metrics"><div class="metric"><div class="mlb">📋 Cópias total</div><div class="mv">${m.ct||'—'}</div></div><div class="metric"><div class="mlb">📋 Máx/conta</div><div class="mv p">${m.cm||'—'}</div></div><div class="metric"><div class="mlb">🏦 Ads bib.</div><div class="mv">${c.qtdBiblioteca||'—'}</div></div><div class="metric"><div class="mlb">🏢 Contas</div><div class="mv p">${(c.contas||[]).length||'—'}</div></div><div class="metric"><div class="mlb">📅 Veiculação</div><div class="mv s">${m.da?fmt(m.da):'—'}</div></div><div class="metric"><div class="mlb">📅 Dias (cad.)</div><div class="mv ${String(dv).length>3?'s':''}">${dv}</div></div></div>${ls.length?`<div class="card-links">${ls.join('')}</div>`:''}<div class="card-actions"><button class="bi" onclick="event.stopPropagation();editar('${c.id}')">✏️ Editar</button><button class="bi del" onclick="event.stopPropagation();deletar('${c.id}')">🗑️ Remover</button></div></div></div>`;
+  return`<div class="card" data-id="${c.id}" ${onclick}>${chk}${syncDot}<div class="card-video">${vidLazy(c.linkAd)}</div><div class="card-body">${nicho}<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="card-title" style="margin:0;flex:1;">${esc(c.nome||'Sem nome')}</div>${c.codigo?'<span class="code-badge">'+c.codigo+'</span>':''}</div><div class="badges">${bc}${bd}${varBadge}</div><div class="metrics"><div class="metric"><div class="mlb">📋 Cópias total</div><div class="mv">${m.ct||'—'}</div></div><div class="metric"><div class="mlb">📋 Máx/conta</div><div class="mv p">${m.cm||'—'}</div></div><div class="metric"><div class="mlb">🏦 Ads bib.</div><div class="mv">${c.qtdBiblioteca||'—'}</div></div><div class="metric"><div class="mlb">🏢 Contas</div><div class="mv p">${(c.contas||[]).length||'—'}</div></div><div class="metric"><div class="mlb">📅 Veiculação</div><div class="mv s">${m.da?fmt(m.da):'—'}</div></div><div class="metric"><div class="mlb">📅 Dias (cad.)</div><div class="mv ${String(dv).length>3?'s':''}">${dv}</div></div></div>${ls.length?`<div class="card-links">${ls.join('')}</div>`:''}<div class="card-actions"><button class="bi" onclick="event.stopPropagation();editar('${c.id}')">✏️ Editar</button><button class="bi del" onclick="event.stopPropagation();deletar('${c.id}')">🗑️ Remover</button></div></div></div>`;
 }
 
 function vidLazy(url){
@@ -901,7 +1010,10 @@ function abrirDetalhe(id){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
         <div>
           ${c.nicho?`<div class="nicho-badge" style="margin-bottom:5px">${esc(c.nicho)}</div>`:''}
-          <div class="dm-title">${esc(c.nome||'Sem nome')}</div>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+            ${c.codigo?`<span class="code-badge">${c.codigo}</span>`:''}
+            <div class="dm-title">${esc(c.nome||'Sem nome')}</div>
+          </div>
           ${!c.sync?`<div style="font-size:0.62rem;color:var(--yellow);margin-top:3px;">⚠ Não sincronizado</div>`:''}
         </div>
         <button class="mc" onclick="fecharDetalhe()">×</button>
@@ -928,6 +1040,7 @@ function abrirDetalhe(id){
           ${(c.contas||[]).map((ct,i)=>ct.linkAnuncio?`<a class="lc" href="${ct.linkAnuncio}" target="_blank">🏢 Conta ${i+1}</a>`:'').join('')}
         </div>
       </div>
+      ${(()=>{const vars=(c.variacoes||[]).map(vid=>{const vr=criativos.find(x=>x.id===vid);return vr?`<span class="var-badge" style="cursor:pointer;" onclick="fecharDetalhe();abrirDetalhe('${vid}')"><span class="code-badge" style="font-size:0.55rem;">${vr.codigo||'—'}</span>${esc(vr.nome||'Sem nome')}</span>`:'';}).filter(Boolean).join('');return vars?`<div class="dm-section"><div class="dm-st">🔀 Variações vinculadas</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${vars}</div></div>`:''})()}
       ${c.obs?`<div class="dm-section"><div class="dm-st">📝 Observações</div><div style="font-size:0.76rem;color:var(--text2);line-height:1.6;">${esc(c.obs)}</div></div>`:''}
       <div style="display:flex;gap:8px;margin-top:14px;">
         <button class="bi" style="flex:1" onclick="fecharDetalhe();editar('${c.id}')">✏️ Editar</button>
@@ -953,6 +1066,50 @@ function foraDetail(e){if(e.target===document.getElementById('ov-detail'))fechar
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+// ── VARIAÇÕES ──
+function renderVarSugestoes(){
+  const q=document.getElementById('f-var-search').value.toLowerCase().trim();
+  const box=document.getElementById('var-sugestoes');
+  if(!q){box.style.display='none';return;}
+  const results=criativos.filter(c=>
+    c.id!==editId&&
+    !(varSelecionados.has(c.id))&&
+    ((c.nome||'').toLowerCase().includes(q)||(c.codigo||'').toLowerCase().includes(q))
+  ).slice(0,8);
+  if(!results.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=results.map(c=>`
+    <div onclick="addVariacao('${c.id}')" style="padding:8px 12px;cursor:pointer;font-size:0.78rem;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      <span class="code-badge">${c.codigo||'—'}</span>
+      <span>${esc(c.nome||'Sem nome')}</span>
+    </div>`).join('');
+}
+
+function addVariacao(id){
+  varSelecionados.add(id);
+  document.getElementById('f-var-search').value='';
+  document.getElementById('var-sugestoes').style.display='none';
+  renderVarSelecionados();
+}
+
+function remVariacao(id){
+  varSelecionados.delete(id);
+  renderVarSelecionados();
+}
+
+function renderVarSelecionados(){
+  const el=document.getElementById('var-selecionados');
+  el.innerHTML=[...varSelecionados].map(id=>{
+    const c=criativos.find(x=>x.id===id);
+    if(!c)return'';
+    return`<div class="var-badge" style="cursor:default;">
+      <span class="code-badge" style="font-size:0.55rem;">${c.codigo||'—'}</span>
+      ${esc(c.nome||'Sem nome')}
+      <span onclick="remVariacao('${id}')" style="cursor:pointer;margin-left:3px;opacity:0.6;">×</span>
+    </div>`;
+  }).join('');
+}
+
 // ── FORM MODAL ──
 function toggleNichoOutro(){const v=document.getElementById('fnicho').value;document.getElementById('nicho-outro-wrap').classList.toggle('show',v==='Outro');}
 function getNicho(){const v=document.getElementById('fnicho').value;if(v==='Outro')return document.getElementById('fnicho-outro').value.trim()||'Outro';return v;}
@@ -971,6 +1128,8 @@ function abrirModal(c=null){
   if(nv&&!base.includes(nv)&&nv!==''){document.getElementById('fnicho').value='Outro';document.getElementById('fnicho-outro').value=nv;document.getElementById('nicho-outro-wrap').classList.add('show');}
   else{document.getElementById('fnicho').value=nv;document.getElementById('nicho-outro-wrap').classList.remove('show');}
   document.getElementById('tgc').classList.toggle('on',variasC);
+  varSelecionados=new Set(c?(c.variacoes||[]):[]);
+  renderVarSelecionados();
   renderC();
   document.getElementById('ov').classList.add('open');
 }
@@ -1001,18 +1160,44 @@ function salvar(){
   const nome=document.getElementById('fn').value.trim();
   if(!nome){alert('Coloca pelo menos um nome!');return;}
   const nicho=getNicho();
+  const existente=editId?criativos.find(c=>c.id===editId):null;
   const cr={
     id:editId||Date.now().toString(),
+    codigo:existente?existente.codigo:gerarCodigo(),
     nome,nicho,
     linkAd:document.getElementById('fla').value.trim(),
     linkBiblioteca:document.getElementById('flb').value.trim(),
     qtdBiblioteca:document.getElementById('fqb').value,
     variasContas:variasC,
     contas:JSON.parse(JSON.stringify(contas)),
+    variacoes:[...varSelecionados],
     obs:document.getElementById('fob').value.trim(),
-    criadoEm:editId?(criativos.find(c=>c.id===editId)||{}).criadoEm:new Date().toISOString(),
+    criadoEm:existente?existente.criadoEm:new Date().toISOString(),
     sync:false
   };
+  // update linked variations bidirectionally
+  (cr.variacoes||[]).forEach(vid=>{
+    const outro=criativos.find(x=>x.id===vid);
+    if(outro&&!(outro.variacoes||[]).includes(cr.id)){
+      outro.variacoes=[...(outro.variacoes||[]),cr.id];
+    }
+  });
+  // sync variacoes bidirectional
+  cr.variacoes = [...varSelecionados];
+  varSelecionados.forEach(vid=>{
+    const other=criativos.find(x=>x.id===vid);
+    if(other){
+      if(!other.variacoes)other.variacoes=[];
+      if(!other.variacoes.includes(cr.id))other.variacoes.push(cr.id);
+    }
+  });
+  // remove from others if deselected
+  criativos.forEach(x=>{
+    if(x.id===cr.id||!x.variacoes)return;
+    if(!varSelecionados.includes(x.id)&&x.variacoes.includes(cr.id)){
+      x.variacoes=x.variacoes.filter(v=>v!==cr.id);
+    }
+  });
   if(editId){const i=criativos.findIndex(c=>c.id===editId);criativos[i]=cr;}
   else criativos.unshift(cr);
   save(cr);
@@ -1031,9 +1216,238 @@ function deletar(id){
   });
 }
 
+// ── BIBLIOTECAS ──
+let bibliotecas = JSON.parse(localStorage.getItem('criativosdb_bibs') || '[]');
+let editBibId = null;
+let updateAdsId = null;
+
+function salvarBibs(){localStorage.setItem('criativosdb_bibs',JSON.stringify(bibliotecas));}
+
+function extrairNomeBib(url){
+  if(!url)return'';
+  const m=url.match(/%22([^%"]+)%22/);
+  if(m)return decodeURIComponent(m[1]);
+  const m2=url.match(/q=([^&]+)/);
+  if(m2)return decodeURIComponent(m2[1]).replace(/"/g,'');
+  return '';
+}
+
+function previewBibNome(){
+  const url=document.getElementById('bib-link').value;
+  const nome=extrairNomeBib(url);
+  document.getElementById('bib-nome-preview').textContent=nome?'→ '+nome:'';
+}
+
+function abrirModalBib(bib=null){
+  editBibId=bib?bib.id:null;
+  document.getElementById('bib-modal-title').textContent=bib?'Editar Biblioteca':'Nova Biblioteca';
+  document.getElementById('bib-link').value=bib?bib.link:'';
+  document.getElementById('bib-ads').value=bib&&bib.historico.length?bib.historico[bib.historico.length-1].ads:'';
+  document.getElementById('bib-obs').value=bib?bib.obs:'';
+  document.getElementById('bib-nome-preview').textContent=bib?'→ '+bib.nome:'';
+  document.getElementById('ov-bib').classList.add('open');
+}
+function fecharModalBib(){document.getElementById('ov-bib').classList.remove('open');editBibId=null;}
+function foraBib(e){if(e.target===document.getElementById('ov-bib'))fecharModalBib();}
+
+function salvarBib(){
+  const link=document.getElementById('bib-link').value.trim();
+  if(!link){toast('Cole o link da biblioteca!','err');return;}
+  const ads=parseInt(document.getElementById('bib-ads').value)||0;
+  const obs=document.getElementById('bib-obs').value.trim();
+  const nome=extrairNomeBib(link)||link;
+  if(editBibId){
+    const bib=bibliotecas.find(b=>b.id===editBibId);
+    if(bib){bib.link=link;bib.nome=nome;bib.obs=obs;}
+  }else{
+    if(bibliotecas.find(b=>b.link===link)){toast('Essa biblioteca já está cadastrada!','warn');return;}
+    bibliotecas.unshift({
+      id:'BIB'+Math.random().toString(36).slice(2,7).toUpperCase(),
+      nome,link,obs,
+      historico:ads?[{ads,data:new Date().toISOString()}]:[],
+      criadoEm:new Date().toISOString()
+    });
+  }
+  salvarBibs();fecharModalBib();renderBibliotecas();toast('Biblioteca salva ✓');
+}
+
+function abrirUpdateAds(id){
+  updateAdsId=id;
+  const bib=bibliotecas.find(b=>b.id===id);if(!bib)return;
+  document.getElementById('update-ads-nome').textContent=bib.nome;
+  document.getElementById('update-ads-val').value='';
+  document.getElementById('ov-update-ads').classList.add('open');
+  setTimeout(()=>document.getElementById('update-ads-val').focus(),100);
+}
+function fecharUpdateAds(){document.getElementById('ov-update-ads').classList.remove('open');updateAdsId=null;}
+function foraUpdateAds(e){if(e.target===document.getElementById('ov-update-ads'))fecharUpdateAds();}
+
+function confirmarUpdateAds(){
+  const val=parseInt(document.getElementById('update-ads-val').value);
+  if(!val){toast('Coloca o número de ads!','err');return;}
+  const bib=bibliotecas.find(b=>b.id===updateAdsId);if(!bib)return;
+  bib.historico.push({ads:val,data:new Date().toISOString()});
+  salvarBibs();fecharUpdateAds();renderBibliotecas();toast('Atualizado ✓');
+}
+
+function deletarBib(id){
+  const bib=bibliotecas.find(b=>b.id===id);if(!bib)return;
+  confirmar('Remover "'+bib.nome+'"?','Essa ação não pode ser desfeita.',()=>{
+    bibliotecas=bibliotecas.filter(b=>b.id!==id);
+    salvarBibs();renderBibliotecas();toast('Biblioteca removida ✓');
+  });
+}
+
+function renderBibliotecas(){
+  const grid=document.getElementById('bib-grid');if(!grid)return;
+  if(!bibliotecas.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="big">📚</div><p>Nenhuma biblioteca ainda.</p></div>';
+    return;
+  }
+  grid.innerHTML=bibliotecas.map(bib=>{
+    const hist=bib.historico||[];
+    const adsAtual=hist.length?hist[hist.length-1].ads:null;
+    const cresceu=hist.length>1&&adsAtual>hist[hist.length-2].ads*1.2;
+    const ctvCount=criativos.filter(c=>c.linkBiblioteca===bib.link).length;
+    const histHTML=hist.slice(-6).reverse().map((h,i,arr)=>{
+      const dt=new Date(h.data);
+      const label=dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const prev=arr[i+1];
+      const diff=prev?h.ads-prev.ads:null;
+      const diffEl=diff!==null?(diff>0?' <span style="color:var(--accent);font-size:0.6rem">+'+diff.toLocaleString()+'</span>':diff<0?' <span style="color:var(--red);font-size:0.6rem">'+diff.toLocaleString()+'</span>':''):'';
+      return'<div class="bib-hist-item"><span class="bib-hist-num">'+h.ads.toLocaleString()+diffEl+'</span><span class="bib-hist-date">'+label+'</span></div>';
+    }).join('');
+    return'<div class="bib-card">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'+
+        '<div><div class="bib-nome">'+esc(bib.nome)+(cresceu?' <span class="bib-fire">🔥</span>':'')+'</div>'+
+        (ctvCount?'<div class="bib-criativos">📎 '+ctvCount+' criativo'+(ctvCount>1?'s':'')+' vinculado'+(ctvCount>1?'s':'')+'</div>':'')+
+        '</div>'+
+        '<a href="'+bib.link+'" target="_blank" class="lc" style="flex-shrink:0;margin-top:2px;">↗ Abrir</a>'+
+      '</div>'+
+      (adsAtual!==null?'<div><div class="bib-ads">'+adsAtual.toLocaleString()+'</div><div class="bib-ads-label">ads ativos</div></div>':'<div style="font-size:0.72rem;color:var(--text2);">Sem registros</div>')+
+      (bib.obs?'<div class="bib-obs" style="margin-top:8px;">'+esc(bib.obs)+'</div>':'')+
+      (hist.length?'<div class="bib-hist"><div class="bib-hist-title">Histórico</div>'+histHTML+'</div>':'')+
+      '<div class="bib-actions">'+
+        '<button class="bi" onclick="abrirUpdateAds(\'' + bib.id + '\')">📊 Atualizar</button>'+
+        '<button class="bi" onclick="abrirModalBib(bibliotecas.find(b=>b.id===\'' + bib.id + '\'))">✏️ Editar</button>'+
+        '<button class="bi del" onclick="deletarBib(\'' + bib.id + '\')">🗑️</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── TABS ──
+function setTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='bibliotecas')renderBibliotecas();
+}
+
+// ── CÓDIGO ÚNICO ──
+function gerarCodigo(){return'CTV'+Math.floor(10000+Math.random()*90000);}
+
+function gerarCodigosFaltantes(){
+  let changed=false;
+  criativos.forEach(c=>{if(!c.codigo){c.codigo=gerarCodigo();changed=true;}});
+  if(changed)salvarLocal();
+}
+
+// ── VARIAÇÕES ──
+function getVariacoes(id){return criativos.filter(c=>c.id!==id&&(c.variacoes||[]).includes(id)||(criativos.find(x=>x.id===id)?.variacoes||[]).includes(c.id));}
+
+// ── FILTRO BIBLIOTECA ──
+function getBibliotecasUnicas(){
+  const links=new Set(criativos.map(c=>c.linkBiblioteca).filter(Boolean));
+  return [...links].map(link=>{
+    const bib=bibliotecas.find(b=>b.link===link);
+    const nome=bib?bib.nome:extrairNomeBib(link)||link;
+    return{link,nome};
+  });
+}
+
+function atualizarFiltroBib(){
+  const sel=document.getElementById('f-bib');
+  if(!sel)return;
+  const val=sel.value;
+  const bibs=getBibliotecasUnicas();
+  sel.innerHTML='<option value="">Todas</option>'+bibs.map(b=>'<option value="'+b.link+'"'+(b.link===val?' selected':'')+'>'+esc(b.nome)+'</option>').join('');
+}
+
+// ── IMPORTAR BIBLIOTECA AUTO ──
+function importarBibliotecasDoJSON(lista){
+  let novas=0;
+  lista.forEach(c=>{
+    if(c.biblioteca&&c.biblioteca.link){
+      const link=c.biblioteca.link;
+      if(!bibliotecas.find(b=>b.link===link)){
+        const nome=extrairNomeBib(link)||link;
+        const ads=c.biblioteca.numero_ads||0;
+        bibliotecas.unshift({
+          id:'BIB'+Math.random().toString(36).slice(2,7).toUpperCase(),
+          nome,link,obs:'',
+          historico:ads?[{ads,data:new Date().toISOString()}]:[],
+          criadoEm:new Date().toISOString()
+        });
+        novas++;
+      }
+    }
+  });
+  if(novas){salvarBibs();renderBibliotecas();}
+  return novas;
+}
+
+// ── VARIAÇÕES ──
+
+function renderVarSugestoes(){
+  const q = document.getElementById('f-var-search').value.toLowerCase().trim();
+  const box = document.getElementById('var-sugestoes');
+  if(!q){box.style.display='none';return;}
+  const matches = criativos.filter(c =>
+    c.id !== editId &&
+    !varSelecionados.includes(c.id) &&
+    ((c.nome||'').toLowerCase().includes(q) || (c.codigo||'').toLowerCase().includes(q))
+  ).slice(0,6);
+  if(!matches.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML = matches.map(c =>
+    '<div data-id="'+c.id+'" onclick="adicionarVar(this.dataset.id)" style="padding:7px 10px;cursor:pointer;font-size:0.78rem;border-bottom:1px solid var(--border);color:var(--text);">'+
+    '<span class="code-badge" style="margin-right:5px;">'+(c.codigo||'')+'</span>'+esc(c.nome||'Sem nome')+
+    '</div>'
+  ).join('');
+}
+
+function adicionarVar(id){
+  if(!varSelecionados.includes(id))varSelecionados.push(id);
+  document.getElementById('f-var-search').value='';
+  document.getElementById('var-sugestoes').style.display='none';
+  renderVarSelecionados();
+}
+
+function removerVar(id){
+  varSelecionados=varSelecionados.filter(x=>x!==id);
+  renderVarSelecionados();
+}
+
+function renderVarSelecionados(){
+  const box=document.getElementById('var-selecionados');
+  if(!varSelecionados.length){box.innerHTML='';return;}
+  box.innerHTML=varSelecionados.map(id=>{
+    const c=criativos.find(x=>x.id===id);
+    if(!c)return'';
+    return'<span style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 8px;font-size:0.7rem;">'+
+      '<span class="code-badge">'+(c.codigo||'')+'</span>'+esc(c.nome||'?')+
+      '<button data-rid="'+id+'" onclick="removerVar(this.dataset.rid)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:0.9rem;line-height:1;padding:0 2px;">×</button>'+
+    '</span>';
+  }).join('');
+}
+
 // ── INIT ──
 setupObserver();
+gerarCodigosFaltantes();
 render();
+renderBibliotecas();
 </script>
 </body>
 </html>
