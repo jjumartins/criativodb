@@ -484,8 +484,18 @@ textarea{resize:vertical;min-height:52px;}
     <div class="fs">
       <div class="fst">📌 Identificação</div>
       <div class="fg"><label>Nome / apelido</label><input type="text" id="fn" placeholder="Ex: Criativo botinha out..."></div>
-      <div class="fg"><label>Link do vídeo / anúncio principal</label><input type="url" id="fla" placeholder="https://..."></div>
-
+      <input type="hidden" id="fla">
+      <div class="fg">
+        <label>Vídeo (upload pro Drive ao salvar)</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="tbtn" type="button" onclick="document.getElementById('criativo-file-input').click()">📎 Selecionar arquivo</button>
+          <span id="criativo-upload-status" style="font-size:0.72rem;color:var(--accent);"></span>
+          <input type="file" id="criativo-file-input" accept="video/*" style="display:none" onchange="stageCriativoFile(this)">
+        </div>
+        <div id="criativo-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
+          <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
       <div class="fg">
         <label>Nicho</label>
         <select id="fnicho" onchange="toggleNichoOutro()">
@@ -542,17 +552,6 @@ textarea{resize:vertical;min-height:52px;}
     <div class="fs">
       <div class="fst">📝 Observações</div>
       <textarea id="fob" placeholder="Qualquer anotação..."></textarea>
-    </div>
-    <div class="fs">
-      <div class="fst">📎 Vídeo (upload pro Drive ao salvar)</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="tbtn" type="button" onclick="document.getElementById('criativo-file-input').click()">📎 Selecionar arquivo</button>
-        <span id="criativo-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
-        <input type="file" id="criativo-file-input" accept="video/*" style="display:none" onchange="stageCriativoFile(this)">
-      </div>
-      <div id="criativo-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
-        <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
-      </div>
     </div>
     <button class="btn-save" onclick="salvar()">Salvar criativo ✓</button>
   </div>
@@ -759,20 +758,18 @@ async function loadDrive(){
       // add unsynced local items not in drive
       localUnsynced.forEach(lu=>{if(!criativos.find(c=>c.id===lu.id))criativos.push(lu);});
       salvarLocal();render();
-      migrarBibliotecasExistentes();
       toast(criativos.length+' criativos carregados ✓');
     }
     setDrive('connected','Drive conectado ✓');
     loadDriveBibs();
     if(typeof loadVSLs==='function')loadVSLs();
-    // clear localStorage only if all items are synced
+    // clear localStorage cache after successful Drive sync
     setTimeout(()=>{
       const unsynced=criativos.filter(c=>!c.sync);
-      if(!unsynced.length){
-        localStorage.removeItem('criativosdb3');
-        localStorage.removeItem('criativosdb_bibs');
-      }
-    },5000);
+      if(!unsynced.length)localStorage.removeItem('criativosdb3');
+      localStorage.removeItem('criativosdb_bibs');
+    },4000);
+    // it will be updated on next save
     atualizarAvisosDrive();
   }catch(e){setDrive('connected','Drive conectado ✓');toast('Erro ao carregar','err');}
 }
@@ -1172,14 +1169,11 @@ function cardHTML(c){
 
 function vidLazy(url){
   if(!url)return`<div class="vph"><div class="icon">🎬</div><span>sem link</span></div>`;
-  // Google Drive embed - iframe shows video thumbnail after processing
+  // Google Drive embed
   if(url.includes('drive.google.com')){
     const m=url.match(/[?&]id=([^&]+)/);
     const id2=m?m[1]:null;
-    if(id2)return`<div style="position:relative;width:100%;height:100%;background:#08080b;">
-      <iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen loading="lazy" style="width:100%;height:100%;border:none;"></iframe>
-      <a href="${url}" target="_blank" onclick="event.stopPropagation()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:white;font-size:0.6rem;padding:3px 7px;border-radius:5px;text-decoration:none;backdrop-filter:blur(4px);">↗ Drive</a>
-    </div>`;
+    if(id2)return`<div class="vph" style="cursor:pointer;" onclick="event.stopPropagation();window.open('${url}','_blank')"><div class="icon">☁️</div><span style="font-size:0.65rem;text-align:center;">Google Drive<br><span style="color:var(--accent2);">clique para abrir ↗</span></span></div>`;
   }
   if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
     return`<video class="lazy-vid" preload="none" muted playsinline
@@ -1202,7 +1196,7 @@ function vidFull(url){
   if(url.includes('drive.google.com')){
     const m=url.match(/[?&]id=([^&]+)/);
     const id2=m?m[1]:null;
-    if(id2)return`<div style="position:relative;width:100%;height:100%;"><iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen style="width:100%;height:100%;border:none;"></iframe><a href="${url}" target="_blank" style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.7);color:white;font-size:0.7rem;padding:5px 12px;border-radius:20px;text-decoration:none;">↗ Abrir no Drive</a></div>`;
+    if(id2)return`<iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>`;
   }
   if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
     return`<video id="detail-vid" src="${url}" preload="metadata" muted playsinline style="width:100%;height:100%;object-fit:contain;"></video>`;
@@ -1254,6 +1248,7 @@ function abrirDetalhe(id){
             <div class="dm-title">${esc(c.nome||'Sem nome')}</div>
           </div>
           ${!c.sync?`<div style="font-size:0.62rem;color:var(--yellow);margin-top:3px;">⚠ Não sincronizado</div>`:''}
+          ${c.vslId?(()=>{const vx=vsls.find(x=>x.id===c.vslId);return vx?`<div style="margin-top:5px;font-size:0.72rem;color:var(--accent2);cursor:pointer;" onclick="fecharDetalhe();setTimeout(()=>verVSL('${c.vslId}'),50)">🎥 ${esc(vx.nome)}</div>`:''})():''}
         </div>
         <button class="mc" onclick="fecharDetalhe()">×</button>
       </div>
@@ -1504,12 +1499,10 @@ function salvar(){
   else criativos.unshift(cr);
   if(!token)mostrarAviso('form-drive-warn');
   save(cr);
-  // grab file ref BEFORE fecharModal clears it
-  const _fileParaUpload = _stagedCriativoFile;
+  const _pendingFile = _stagedCriativoFile; // grab before fecharModal clears it
   fecharModal();
   render();
-  // start background upload
-  if(_fileParaUpload){ _stagedCriativoFile = _fileParaUpload; executarUploadCriativo(cr); }
+  if(_pendingFile){ _stagedCriativoFile = _pendingFile; executarUploadCriativo(cr); }
 }
 
 function editar(id){const c=criativos.find(x=>x.id===id);if(c)abrirModal(c);}
@@ -1805,7 +1798,6 @@ function renderVarSelecionados(){
 
 // ── MIGRAR BIBLIOTECAS ──
 function migrarBibliotecasExistentes(){
-  // always check - run even if bibliotecas has items (might have new criativos)
   let novas=0;
   criativos.forEach(c=>{
     if(!c.linkBiblioteca)return;
@@ -2048,14 +2040,24 @@ function executarUploadCriativo(cr){
   if(!token){ toast('Conecte o Drive para fazer upload do vídeo','warn'); return Promise.resolve(); }
   const file = _stagedCriativoFile;
   _stagedCriativoFile = null;
+  const crId = cr.id;
   const nicho = cr.nicho || 'Sem Nicho';
   const nomeArquivo = gerarNomeCriativoFromCr(cr, file);
   const renamedFile = new File([file], nomeArquivo, {type: file.type});
-  const status = document.getElementById('criativo-upload-status');
-  if(status){ status.textContent='Enviando em background...'; status.style.color='var(--text2)'; }
   return new Promise((resolve) => {
     addToUploadQueue(nomeArquivo, (onProgress) =>
-      uploadVideoToDrive(renamedFile, nicho, 'Criativos', onProgress)
+      uploadVideoToDrive(renamedFile, nicho, 'Criativos', onProgress).then(url => {
+        // update linkAd in the criativos array
+        const idx = criativos.findIndex(x => x.id === crId);
+        if(idx >= 0){
+          criativos[idx].linkAd = url;
+          criativos[idx].sync = false;
+          salvarLocal();
+          if(token) saveDrive();
+          render();
+        }
+        return url;
+      })
     );
     resolve();
   });
@@ -2245,7 +2247,8 @@ function deletarVSL(id){
   const v=vsls.find(x=>x.id===id);if(!v)return;
   confirmar('Remover "'+v.nome+'"?','Essa ação não pode ser desfeita.',async()=>{
     vsls=vsls.filter(x=>x.id!==id);
-    await saveVSLs();renderVSLs();toast('VSL removida ✓');
+    await saveVSLs();
+    renderVSLs();toast('VSL removida ✓');
   });
 }
 
@@ -2318,7 +2321,8 @@ function renderVSLs(){
           '<div class="metric"><div class="mlb">💰 Valor $</div><div class="mv p">'+(v.valor?'$'+v.valor.toLocaleString():'—')+'</div></div>'+
           '<div class="metric"><div class="mlb">📅 Criação</div><div class="mv s">'+(dt?fmt(dt):'—')+'</div></div>'+
         '</div>'+
-        (v.mecanismo?'<div style="font-size:0.68rem;color:var(--text2);margin:6px 0;"><span style="color:var(--accent2);">⚡</span> '+esc(v.mecanismo)+'</div>':'')+
+        (()=>{const cnt=criativos.filter(x=>x.vslId===v.id).length;return cnt?'<div style="font-size:0.68rem;color:var(--accent2);margin-bottom:3px;">🎬 '+cnt+' criativo'+(cnt>1?'s':'')+'</div>':''})()+
+      (v.mecanismo?'<div style="font-size:0.68rem;color:var(--text2);margin:6px 0;"><span style="color:var(--accent2);">⚡</span> '+esc(v.mecanismo)+'</div>':'')+
         '<div class="card-actions">'+
           '<button class="bi" onclick="abrirModalVSL(vsls.find(x=>x.id===\"'+v.id+'\"))">✏️ Editar</button>'+
           '<button class="bi" onclick="verVSL(\"'+v.id+'\")">👁 Ver</button>'+
@@ -2348,7 +2352,8 @@ function verVSL(id){
       (v.mecanismo?'<div class="dm-section"><div class="dm-st">⚡ Mecanismo único</div><div style="font-size:0.78rem;color:var(--text);line-height:1.6;">'+esc(v.mecanismo)+'</div></div>':'')+
       (v.transcricao?'<div class="dm-section"><div class="dm-st">📄 Transcrição</div><div style="font-size:0.74rem;color:var(--text2);line-height:1.7;max-height:220px;overflow-y:auto;white-space:pre-wrap;">'+esc(v.transcricao)+'</div></div>':'')+
       (v.obs?'<div class="dm-section"><div class="dm-st">💬 Observações</div><div style="font-size:0.76rem;color:var(--text2);line-height:1.6;">'+esc(v.obs)+'</div></div>':'')+
-      (()=>{const ctvs=criativos.filter(x=>x.vslId===v.id);return ctvs.length?'<div class="dm-section"><div class="dm-st">🎬 Criativos vinculados</div><div style="display:flex;flex-wrap:wrap;gap:5px;">'+ctvs.map(cx=>'<span class="var-badge" style="cursor:pointer;" onclick="fecharDetalhe();abrirDetalhe(\''+cx.id+'\')">'+(cx.codigo||cx.nome)+'</span>').join('')+'</div></div>':''})()+'<div style="display:flex;gap:8px;margin-top:14px;">'+
+      (()=>{const ctvs=criativos.filter(x=>x.vslId===v.id);return ctvs.length?'<div class="dm-section"><div class="dm-st">🎬 Criativos vinculados</div><div style="display:flex;flex-wrap:wrap;gap:5px;">'+ctvs.map(cx=>'<span class="var-badge" style="cursor:pointer;" onmousedown="fecharDetalhe();setTimeout(()=>abrirDetalhe(\''+cx.id+'\'),50)">'+(cx.codigo?cx.codigo+' ':'')+esc(cx.nome||'?')+'</span>').join('')+'</div></div>':''})()+
+      '<div style="display:flex;gap:8px;margin-top:14px;">'+
         '<button class="bi" style="flex:1" onclick="fecharDetalhe();abrirModalVSL(vsls.find(x=>x.id===\"'+v.id+'\"))">✏️ Editar</button>'+
         '<button class="bi del" style="flex:1" onclick="fecharDetalhe();deletarVSL(\"'+v.id+'\")">🗑️ Remover</button>'+
       '</div>'+
