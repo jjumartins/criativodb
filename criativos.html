@@ -426,6 +426,7 @@ textarea{resize:vertical;min-height:52px;}
       <div class="mt" id="bib-modal-title">Nova Biblioteca</div>
       <button class="mc" onclick="fecharModalBib()">×</button>
     </div>
+    <div id="bib-drive-warn" style="display:none;background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.35);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.75rem;color:var(--yellow);align-items:center;gap:10px;">⚠️ Não conectado ao Drive — dados salvos localmente até sincronizar.<button onclick="driveAction();atualizarAvisosDrive()" style="background:var(--yellow);color:#0c0c0f;border:none;padding:4px 10px;border-radius:5px;font-family:Syne,sans-serif;font-weight:700;font-size:0.7rem;cursor:pointer;margin-left:auto;white-space:nowrap;">Conectar Drive</button></div>
     <div class="fs">
       <div class="fst">🔗 Link da biblioteca</div>
       <div class="fg"><label>Cole o link completo do Facebook Ads Library</label>
@@ -452,6 +453,7 @@ textarea{resize:vertical;min-height:52px;}
       <div class="mt" id="update-ads-nome">Atualizar ads</div>
       <button class="mc" onclick="fecharUpdateAds()">×</button>
     </div>
+    <div id="update-drive-warn" style="display:none;background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.35);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.75rem;color:var(--yellow);align-items:center;gap:10px;">⚠️ Não conectado ao Drive — dados salvos localmente até sincronizar.<button onclick="driveAction();atualizarAvisosDrive()" style="background:var(--yellow);color:#0c0c0f;border:none;padding:4px 10px;border-radius:5px;font-family:Syne,sans-serif;font-weight:700;font-size:0.7rem;cursor:pointer;margin-left:auto;white-space:nowrap;">Conectar Drive</button></div>
     <div class="fg">
       <label>Novo número de ads</label>
       <input type="number" id="update-ads-val" placeholder="ex: 12000" min="0">
@@ -467,21 +469,12 @@ textarea{resize:vertical;min-height:52px;}
       <div class="mt" id="mtit">Novo Criativo</div>
       <button class="mc" onclick="fecharModal()">×</button>
     </div>
+    <div id="form-drive-warn" style="display:none;background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.35);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.75rem;color:var(--yellow);align-items:center;gap:10px;">⚠️ Não conectado ao Drive — dados salvos localmente até sincronizar.<button onclick="driveAction();atualizarAvisosDrive()" style="background:var(--yellow);color:#0c0c0f;border:none;padding:4px 10px;border-radius:5px;font-family:Syne,sans-serif;font-weight:700;font-size:0.7rem;cursor:pointer;margin-left:auto;white-space:nowrap;">Conectar Drive</button></div>
     <div class="fs">
       <div class="fst">📌 Identificação</div>
       <div class="fg"><label>Nome / apelido</label><input type="text" id="fn" placeholder="Ex: Criativo botinha out..."></div>
       <div class="fg"><label>Link do vídeo / anúncio principal</label><input type="url" id="fla" placeholder="https://..."></div>
-      <div class="fg">
-        <label>Ou envie do seu PC (upload pro Drive)</label>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="tbtn" type="button" onclick="document.getElementById('criativo-file-input').click()">📎 Selecionar arquivo</button>
-          <span id="criativo-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
-          <input type="file" id="criativo-file-input" accept="video/*" style="display:none" onchange="uploadCriativoVideo(this)">
-        </div>
-        <div id="criativo-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
-          <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
-        </div>
-      </div>
+
       <div class="fg">
         <label>Nicho</label>
         <select id="fnicho" onchange="toggleNichoOutro()">
@@ -527,6 +520,17 @@ textarea{resize:vertical;min-height:52px;}
       <textarea id="fob" placeholder="Qualquer anotação..."></textarea>
     </div>
     <button class="btn-save" onclick="salvar()">Salvar criativo ✓</button>
+    <div id="criativo-upload-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+      <div class="fst">📎 Upload do vídeo pro Drive</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+        <button class="tbtn" type="button" onclick="document.getElementById('criativo-file-input').click()">📎 Selecionar arquivo</button>
+        <span id="criativo-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
+        <input type="file" id="criativo-file-input" accept="video/*" style="display:none" onchange="stageCriativoFile(this)">
+      </div>
+      <div id="criativo-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
+        <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -554,7 +558,7 @@ textarea{resize:vertical;min-height:52px;}
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="tbtn" type="button" onclick="document.getElementById('vsl-file-input').click()">📎 Selecionar arquivo</button>
           <span id="vsl-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
-          <input type="file" id="vsl-file-input" accept="video/*" style="display:none" onchange="uploadVSLVideo(this)">
+          <input type="file" id="vsl-file-input" accept="video/*" style="display:none" onchange="stageVSLFile(this)">
         </div>
         <div id="vsl-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
           <div id="vsl-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
@@ -683,6 +687,7 @@ function driveAction(){
         token=r.access_token;
         setDrive('connected','Drive conectado ✓');
         document.getElementById('drive-warning').classList.remove('show');
+        atualizarAvisosDrive();
         toast('Drive conectado!');
         await loadDrive();
         // sync unsync items
@@ -732,6 +737,17 @@ async function loadDrive(){
       toast(criativos.length+' criativos carregados ✓');
     }
     setDrive('connected','Drive conectado ✓');
+    loadDriveBibs();
+    if(typeof loadVSLs==='function')loadVSLs();
+    // clear localStorage only if all items are synced
+    setTimeout(()=>{
+      const unsynced=criativos.filter(c=>!c.sync);
+      if(!unsynced.length){
+        localStorage.removeItem('criativosdb3');
+        localStorage.removeItem('criativosdb_bibs');
+      }
+    },5000);
+    atualizarAvisosDrive();
   }catch(e){setDrive('connected','Drive conectado ✓');toast('Erro ao carregar','err');}
 }
 
@@ -761,15 +777,59 @@ async function saveDrive(){
 function salvarLocal(){localStorage.setItem('criativosdb3',JSON.stringify(criativos));}
 
 function save(cr){
-  // mark sync status
-  if(token){cr.sync=false;}else{cr.sync=false;}
+  cr.sync=false;
   salvarLocal();
   render();
-  if(token){
-    saveDrive();
-  }else{
-    toast('Salvo localmente (sem Drive)','warn');
-  }
+  if(token){saveDrive();}
+  else{toast('Salvo localmente — conecte o Drive para sincronizar','warn');}
+}
+
+function atualizarAvisosDrive(){
+  ['form-drive-warn','bib-drive-warn','update-drive-warn'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  // show upload section after saving criativo
+  const up=document.getElementById('criativo-upload-section');
+  if(up)up.style.display='block';
+}
+
+function mostrarAviso(id){
+  const el=document.getElementById(id);if(el)el.style.display='flex';
+}
+
+async function saveDriveBibs(){
+  if(!token)return;
+  try{
+    const content=JSON.stringify(bibliotecas);
+    const r=await fetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='bibsdb.json'&fields=files(id)",{headers:{Authorization:'Bearer '+token}});
+    const d=await r.json();
+    const fid=d.files&&d.files.length?d.files[0].id:null;
+    if(fid){
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fid+'?uploadType=media',{method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:content});
+    }else{
+      const meta={name:'bibsdb.json',parents:['appDataFolder']};
+      const f=new FormData();
+      f.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+      f.append('file',new Blob([content],{type:'application/json'}));
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+token},body:f});
+    }
+  }catch(e){console.error('saveDriveBibs',e);}
+}
+
+async function loadDriveBibs(){
+  if(!token)return;
+  try{
+    const r=await fetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='bibsdb.json'&fields=files(id)",{headers:{Authorization:'Bearer '+token}});
+    const d=await r.json();
+    if(!d.files||!d.files.length)return;
+    const r2=await fetch('https://www.googleapis.com/drive/v3/files/'+d.files[0].id+'?alt=media',{headers:{Authorization:'Bearer '+token}});
+    const data=await r2.json();
+    if(Array.isArray(data)){
+      bibliotecas=data;
+      localStorage.setItem('criativosdb_bibs',JSON.stringify(bibliotecas));
+      renderBibliotecas();
+    }
+  }catch(e){console.error('loadDriveBibs',e);}
 }
 
 // ── DATA ──
@@ -1076,6 +1136,12 @@ function cardHTML(c){
 
 function vidLazy(url){
   if(!url)return`<div class="vph"><div class="icon">🎬</div><span>sem link</span></div>`;
+  // Google Drive embed
+  if(url.includes('drive.google.com')){
+    const m=url.match(/[?&]id=([^&]+)/);
+    const id2=m?m[1]:null;
+    if(id2)return`<iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen loading="lazy" style="width:100%;height:100%;border:none;"></iframe>`;
+  }
   if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
     return`<video class="lazy-vid" preload="none" muted playsinline
       style="width:100%;height:100%;object-fit:cover;"
@@ -1094,6 +1160,11 @@ function vidLazy(url){
 
 function vidFull(url){
   if(!url)return`<div class="vph"><div class="icon">🎬</div><span>sem link</span></div>`;
+  if(url.includes('drive.google.com')){
+    const m=url.match(/[?&]id=([^&]+)/);
+    const id2=m?m[1]:null;
+    if(id2)return`<iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>`;
+  }
   if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
     return`<video id="detail-vid" src="${url}" preload="metadata" muted playsinline style="width:100%;height:100%;object-fit:contain;"></video>`;
   if(url.includes('facebook.com')||url.includes('fb.com'))
@@ -1262,9 +1333,19 @@ function abrirModal(c=null){
   varSelecionados=new Set(c?(c.variacoes||[]):[]);
   renderVarSelecionados();
   renderC();
+  const fw=document.getElementById('form-drive-warn');if(fw)fw.style.display='none';
+  const upSec=document.getElementById('criativo-upload-section');if(upSec)upSec.style.display='none';
   document.getElementById('ov').classList.add('open');
 }
-function fecharModal(){document.getElementById('ov').classList.remove('open');editId=null;}
+function fecharModal(){
+  document.getElementById('ov').classList.remove('open');
+  editId=null;
+  _stagedCriativoFile=null;
+  const st=document.getElementById('criativo-upload-status');
+  if(st){st.textContent='';st.style.color='';}
+  const bar=document.getElementById('criativo-upload-bar');
+  if(bar)bar.style.display='none';
+}
 function foraForm(e){if(e.target===document.getElementById('ov'))fecharModal();}
 function toggleC(){variasC=!variasC;document.getElementById('tgc').classList.toggle('on',variasC);}
 function addC(){contas.push({linkAnuncio:'',copias:'',dataVeiculacao:''});renderC();}
@@ -1331,7 +1412,15 @@ function salvar(){
   });
   if(editId){const i=criativos.findIndex(c=>c.id===editId);criativos[i]=cr;}
   else criativos.unshift(cr);
+  if(!token)mostrarAviso('form-drive-warn');
   save(cr);
+  if(_stagedCriativoFile){
+    executarUploadCriativo(cr).then(()=>{
+      const idx=criativos.findIndex(x=>x.id===cr.id);
+      if(idx>=0){criativos[idx].linkAd=cr.linkAd;criativos[idx].sync=false;salvarLocal();if(token)saveDrive();}
+      render();
+    });
+  }
   fecharModal();
   render();
 }
@@ -1399,7 +1488,10 @@ function salvarBib(){
       criadoEm:new Date().toISOString()
     });
   }
-  salvarBibs();fecharModalBib();renderBibliotecas();toast('Biblioteca salva ✓');
+  if(!token)mostrarAviso('bib-drive-warn');
+  salvarBibs();
+  if(token)saveDriveBibs();
+  fecharModalBib();renderBibliotecas();toast('Biblioteca salva ✓');
 }
 
 function abrirUpdateAds(id){
@@ -1418,14 +1510,17 @@ function confirmarUpdateAds(){
   if(!val){toast('Coloca o número de ads!','err');return;}
   const bib=bibliotecas.find(b=>b.id===updateAdsId);if(!bib)return;
   bib.historico.push({ads:val,data:new Date().toISOString()});
-  salvarBibs();fecharUpdateAds();renderBibliotecas();toast('Atualizado ✓');
+  if(!token)mostrarAviso('update-drive-warn');
+  salvarBibs();
+  if(token)saveDriveBibs();
+  fecharUpdateAds();renderBibliotecas();toast('Atualizado ✓');
 }
 
 function deletarBib(id){
   const bib=bibliotecas.find(b=>b.id===id);if(!bib)return;
   confirmar('Remover "'+bib.nome+'"?','Essa ação não pode ser desfeita.',()=>{
     bibliotecas=bibliotecas.filter(b=>b.id!==id);
-    salvarBibs();renderBibliotecas();toast('Biblioteca removida ✓');
+    salvarBibs();if(token)saveDriveBibs();renderBibliotecas();toast('Biblioteca removida ✓');
   });
 }
 
@@ -1650,6 +1745,29 @@ async function getFolderForUpload(nicho,tipo){
   return await getOrCreateFolder(tipo,nichoId);
 }
 
+function gerarNomeCriativoFromCr(cr, file){
+  const m = calcM(cr);
+  const ext = file.name.split('.').pop();
+  let partes = [];
+  if(cr.nicho) partes.push(cr.nicho);
+  if(m.ct) partes.push(m.ct+' copias');
+  if(m.dh) partes.push(m.dh+' dias');
+  if(cr.qtdBiblioteca) partes.push(cr.qtdBiblioteca+' adlib');
+  if(cr.variasContas) partes.push('varias contas');
+  return (partes.join(' - ') || cr.nome || file.name.replace(/\.[^.]+$/,'')) + '.' + ext;
+}
+
+function gerarNomeVSLFromVsl(vsl, file){
+  const ext = file.name.split('.').pop();
+  let partes = [];
+  if(vsl.nicho) partes.push(vsl.nicho);
+  if(vsl.mecanismo) partes.push(vsl.mecanismo);
+  if(vsl.dataCriacao) partes.push(vsl.dataCriacao.replace(/\//g,'-'));
+  if(vsl.visitas) partes.push(vsl.visitas.toLocaleString()+' visitas');
+  if(vsl.valor) partes.push('$'+vsl.valor.toLocaleString());
+  return (partes.join(' - ') || vsl.nome || file.name.replace(/\.[^.]+$/,'')) + '.' + ext;
+}
+
 function gerarNomeCriativo(file){
   // read current form values
   const nicho=document.getElementById('fnicho').value||'';
@@ -1728,54 +1846,87 @@ async function uploadVideoToDrive(file,nicho,tipo,onProgress){
   return'https://drive.google.com/uc?export=preview&id='+fileId;
 }
 
+// staged files - upload happens on save
+let _stagedCriativoFile = null;
+let _stagedVSLFile = null;
+
+function stageCriativoFile(input){
+  const file = input.files[0]; if(!file) return;
+  _stagedCriativoFile = file;
+  const status = document.getElementById('criativo-upload-status');
+  status.textContent = '📎 ' + file.name + ' (será enviado ao salvar)';
+  status.style.color = 'var(--accent)';
+}
+
 async function uploadCriativoVideo(input){
-  if(!token){toast('Conecte o Drive primeiro!','err');return;}
-  const file=input.files[0];if(!file)return;
-  const nicho=(document.getElementById('fnicho').value==='Outro'
-    ?document.getElementById('fnicho-outro').value
-    :document.getElementById('fnicho').value)||'Sem Nicho';
-  const nomeArquivo=gerarNomeCriativo(file);
-  const renamedFile=new File([file],nomeArquivo,{type:file.type});
-  const status=document.getElementById('criativo-upload-status');
-  const bar=document.getElementById('criativo-upload-bar');
-  const prog=document.getElementById('criativo-upload-progress');
-  status.textContent='Enviando...';bar.style.display='block';
+  // kept for backward compat - stages the file
+  stageCriativoFile(input);
+}
+
+async function executarUploadCriativo(cr){
+  if(!_stagedCriativoFile) return;
+  if(!token){ toast('Conecte o Drive para fazer upload do vídeo','warn'); return; }
+  const nicho = cr.nicho || 'Sem Nicho';
+  const nomeArquivo = gerarNomeCriativoFromCr(cr, _stagedCriativoFile);
+  const renamedFile = new File([_stagedCriativoFile], nomeArquivo, {type: _stagedCriativoFile.type});
+  const status = document.getElementById('criativo-upload-status');
+  const bar = document.getElementById('criativo-upload-bar');
+  const prog = document.getElementById('criativo-upload-progress');
+  if(status){ status.textContent='Enviando...'; status.style.color='var(--text2)'; }
+  if(bar) bar.style.display='block';
   try{
-    const url=await uploadVideoToDrive(renamedFile,nicho,'Criativos',(p)=>{
-      prog.style.width=p+'%';status.textContent='Enviando... '+p+'%';
+    const url = await uploadVideoToDrive(renamedFile, nicho, 'Criativos', (p)=>{
+      if(prog) prog.style.width=p+'%';
+      if(status) status.textContent='Enviando... '+p+'%';
     });
-    document.getElementById('fla').value=url;
-    status.textContent='✓ Upload concluído!';bar.style.display='none';
+    cr.linkAd = url;
+    if(status){ status.textContent='✓ Enviado!'; }
+    if(bar) bar.style.display='none';
     toast('Vídeo enviado pro Drive ✓');
   }catch(e){
-    status.textContent='⚠ Erro: '+e.message;
-    toast('Erro no upload','err');
+    if(status) status.textContent='⚠ Erro: '+e.message;
+    toast('Erro no upload: '+e.message,'err');
   }
-  input.value='';
+  _stagedCriativoFile = null;
+}
+
+function stageVSLFile(input){
+  const file = input.files[0]; if(!file) return;
+  _stagedVSLFile = file;
+  const status = document.getElementById('vsl-upload-status');
+  status.textContent = '📎 ' + file.name + ' (será enviado ao salvar)';
+  status.style.color = 'var(--accent)';
 }
 
 async function uploadVSLVideo(input){
-  if(!token){toast('Conecte o Drive primeiro!','err');return;}
-  const file=input.files[0];if(!file)return;
-  const nicho=(typeof getVSLNicho==='function'?getVSLNicho():'')||'Sem Nicho';
-  const nomeArquivo=gerarNomeVSL(file);
-  const renamedFile=new File([file],nomeArquivo,{type:file.type});
-  const status=document.getElementById('vsl-upload-status');
-  const bar=document.getElementById('vsl-upload-bar');
-  const prog=document.getElementById('vsl-upload-progress');
-  status.textContent='Enviando...';bar.style.display='block';
+  stageVSLFile(input);
+}
+
+async function executarUploadVSL(vsl){
+  if(!_stagedVSLFile) return;
+  if(!token){ toast('Conecte o Drive para fazer upload do vídeo','warn'); return; }
+  const nicho = vsl.nicho || 'Sem Nicho';
+  const nomeArquivo = gerarNomeVSLFromVsl(vsl, _stagedVSLFile);
+  const renamedFile = new File([_stagedVSLFile], nomeArquivo, {type: _stagedVSLFile.type});
+  const status = document.getElementById('vsl-upload-status');
+  const bar = document.getElementById('vsl-upload-bar');
+  const prog = document.getElementById('vsl-upload-progress');
+  if(status){ status.textContent='Enviando...'; status.style.color='var(--text2)'; }
+  if(bar) bar.style.display='block';
   try{
-    const url=await uploadVideoToDrive(renamedFile,nicho,'VSL',(p)=>{
-      prog.style.width=p+'%';status.textContent=p+'%';
+    const url = await uploadVideoToDrive(renamedFile, nicho, 'VSL', (p)=>{
+      if(prog) prog.style.width=p+'%';
+      if(status) status.textContent=p+'%';
     });
-    document.getElementById('vsl-link').value=url;
-    status.textContent='✓ Concluído!';bar.style.display='none';
+    vsl.linkVideo = url;
+    if(status){ status.textContent='✓ Enviado!'; }
+    if(bar) bar.style.display='none';
     toast('Vídeo enviado pro Drive ✓');
   }catch(e){
-    status.textContent='⚠ '+e.message;
-    toast('Erro no upload','err');
+    if(status) status.textContent='⚠ '+e.message;
+    toast('Erro no upload: '+e.message,'err');
   }
-  input.value='';
+  _stagedVSLFile = null;
 }
 
 async function uploadPIFile(input,id){
@@ -1889,7 +2040,15 @@ function abrirModalVSL(vsl=null){
   }
   document.getElementById('ov-vsl').classList.add('open');
 }
-function fecharModalVSL(){document.getElementById('ov-vsl').classList.remove('open');editVSLId=null;}
+function fecharModalVSL(){
+  document.getElementById('ov-vsl').classList.remove('open');
+  editVSLId=null;
+  _stagedVSLFile=null;
+  const st=document.getElementById('vsl-upload-status');
+  if(st){st.textContent='';st.style.color='';}
+  const bar=document.getElementById('vsl-upload-bar');
+  if(bar)bar.style.display='none';
+}
 
 async function salvarVSL(){
   if(!token){document.getElementById('vsl-drive-warn').style.display='flex';return;}
@@ -1909,6 +2068,8 @@ async function salvarVSL(){
   };
   if(editVSLId){const i=vsls.findIndex(v=>v.id===editVSLId);vsls[i]=vsl;}
   else vsls.unshift(vsl);
+  // upload staged video if any
+  if(_stagedVSLFile) await executarUploadVSL(vsl);
   await saveVSLs();
   fecharModalVSL();renderVSLs();
   toast('VSL salva ✓');
