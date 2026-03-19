@@ -496,7 +496,6 @@ textarea{resize:vertical;min-height:52px;}
           <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
         </div>
       </div>
-
       <div class="fg">
         <label>Nicho</label>
         <select id="fnicho" onchange="toggleNichoOutro()">
@@ -553,17 +552,6 @@ textarea{resize:vertical;min-height:52px;}
     <div class="fs">
       <div class="fst">📝 Observações</div>
       <textarea id="fob" placeholder="Qualquer anotação..."></textarea>
-    </div>
-    <div class="fs">
-      <div class="fst">📎 Vídeo (upload pro Drive ao salvar)</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="tbtn" type="button" onclick="document.getElementById('criativo-file-input').click()">📎 Selecionar arquivo</button>
-        <span id="criativo-upload-status" style="font-size:0.72rem;color:var(--text2);"></span>
-        <input type="file" id="criativo-file-input" accept="video/*" style="display:none" onchange="stageCriativoFile(this)">
-      </div>
-      <div id="criativo-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
-        <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
-      </div>
     </div>
     <button class="btn-save" onclick="salvar()">Salvar criativo ✓</button>
   </div>
@@ -769,21 +757,21 @@ async function loadDrive(){
       criativos=d.map(c=>({...c,sync:true}));
       // add unsynced local items not in drive
       localUnsynced.forEach(lu=>{if(!criativos.find(c=>c.id===lu.id))criativos.push(lu);});
-      salvarLocal();render();
+      gerarCodigosFaltantes();
       migrarBibliotecasExistentes();
+      salvarLocal();render();
       toast(criativos.length+' criativos carregados ✓');
     }
     setDrive('connected','Drive conectado ✓');
     loadDriveBibs();
     if(typeof loadVSLs==='function')loadVSLs();
-    // clear localStorage only if all items are synced
+    // clear localStorage cache after successful Drive sync
     setTimeout(()=>{
       const unsynced=criativos.filter(c=>!c.sync);
-      if(!unsynced.length){
-        localStorage.removeItem('criativosdb3');
-        localStorage.removeItem('criativosdb_bibs');
-      }
-    },5000);
+      if(!unsynced.length)localStorage.removeItem('criativosdb3');
+      localStorage.removeItem('criativosdb_bibs');
+    },4000);
+    // it will be updated on next save
     atualizarAvisosDrive();
   }catch(e){setDrive('connected','Drive conectado ✓');toast('Erro ao carregar','err');}
 }
@@ -825,9 +813,6 @@ function atualizarAvisosDrive(){
   ['form-drive-warn','bib-drive-warn','update-drive-warn'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display='none';
   });
-  // show upload section after saving criativo
-  const up=document.getElementById('criativo-upload-section');
-  if(up)up.style.display='block';
 }
 
 function mostrarAviso(id){
@@ -1183,14 +1168,11 @@ function cardHTML(c){
 
 function vidLazy(url){
   if(!url)return`<div class="vph"><div class="icon">🎬</div><span>sem link</span></div>`;
-  // Google Drive embed - iframe shows video thumbnail after processing
+  // Google Drive embed
   if(url.includes('drive.google.com')){
     const m=url.match(/[?&]id=([^&]+)/);
     const id2=m?m[1]:null;
-    if(id2)return`<div style="position:relative;width:100%;height:100%;background:#08080b;">
-      <iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen loading="lazy" style="width:100%;height:100%;border:none;"></iframe>
-      <a href="${url}" target="_blank" onclick="event.stopPropagation()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:white;font-size:0.6rem;padding:3px 7px;border-radius:5px;text-decoration:none;backdrop-filter:blur(4px);">↗ Drive</a>
-    </div>`;
+    if(id2)return`<div class="vph" style="cursor:pointer;" onclick="event.stopPropagation();window.open('${url}','_blank')"><div class="icon">☁️</div><span style="font-size:0.65rem;text-align:center;">Google Drive<br><span style="color:var(--accent2);">clique para abrir ↗</span></span></div>`;
   }
   if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
     return`<video class="lazy-vid" preload="none" muted playsinline
@@ -1213,7 +1195,7 @@ function vidFull(url){
   if(url.includes('drive.google.com')){
     const m=url.match(/[?&]id=([^&]+)/);
     const id2=m?m[1]:null;
-    if(id2)return`<div style="position:relative;width:100%;height:100%;"><iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen style="width:100%;height:100%;border:none;"></iframe><a href="${url}" target="_blank" style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.7);color:white;font-size:0.7rem;padding:5px 12px;border-radius:20px;text-decoration:none;">↗ Abrir no Drive</a></div>`;
+    if(id2)return`<iframe src="https://drive.google.com/file/d/${id2}/preview" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>`;
   }
   if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
     return`<video id="detail-vid" src="${url}" preload="metadata" muted playsinline style="width:100%;height:100%;object-fit:contain;"></video>`;
@@ -1375,7 +1357,7 @@ function renderVarSugestoes(){
     const hay=((c.nome||'')+' '+(c.codigo||'')).toLowerCase();
     return words.every(w=>hay.includes(w));
   }).slice(0,8);
-  const results=pool;
+  const results=words.length?pool:criativos.filter(c=>c.id!==editId&&!varSelecionados.has(c.id)).slice(0,8);
   if(!results.length){box.style.display='none';return;}
   box.style.display='block';
   box.innerHTML=results.map(c=>`
@@ -1435,7 +1417,6 @@ function abrirModal(c=null){
   // load VSL selection
   limparVSLSelecionada();
   if(c&&c.vslId){selecionarVSL(c.vslId);}
-  const upSec=document.getElementById('criativo-upload-section');if(upSec)upSec.style.display='none';
   document.getElementById('ov').classList.add('open');
 }
 function fecharModal(){
@@ -1508,7 +1489,7 @@ function salvar(){
   // remove from others if deselected
   criativos.forEach(x=>{
     if(x.id===cr.id||!x.variacoes)return;
-    if(!varSelecionados.includes(x.id)&&x.variacoes.includes(cr.id)){
+    if(!varSelecionados.has(x.id)&&x.variacoes.includes(cr.id)){
       x.variacoes=x.variacoes.filter(v=>v!==cr.id);
     }
   });
@@ -1516,12 +1497,10 @@ function salvar(){
   else criativos.unshift(cr);
   if(!token)mostrarAviso('form-drive-warn');
   save(cr);
-  // grab file ref BEFORE fecharModal clears it
-  const _fileParaUpload = _stagedCriativoFile;
+  const _pendingFile = _stagedCriativoFile; // grab before fecharModal clears it
   fecharModal();
   render();
-  // start background upload
-  if(_fileParaUpload){ _stagedCriativoFile = _fileParaUpload; executarUploadCriativo(cr); }
+  if(_pendingFile){ _stagedCriativoFile = _pendingFile; executarUploadCriativo(cr); }
 }
 
 function editar(id){const c=criativos.find(x=>x.id===id);if(c)abrirModal(c);}
@@ -1772,35 +1751,7 @@ function getSelectedVSLId(){
   return inp?inp.dataset.selectedVslId||null:null;
 }
 
-function renderVarSugestoes(){
-  const q = document.getElementById('f-var-search').value.toLowerCase().trim();
-  const box = document.getElementById('var-sugestoes');
-  if(!q){box.style.display='none';return;}
-  const matches = criativos.filter(c =>
-    c.id !== editId &&
-    !varSelecionados.includes(c.id) &&
-    ((c.nome||'').toLowerCase().includes(q) || (c.codigo||'').toLowerCase().includes(q))
-  ).slice(0,6);
-  if(!matches.length){box.style.display='none';return;}
-  box.style.display='block';
-  box.innerHTML = matches.map(c =>
-    '<div data-id="'+c.id+'" onclick="adicionarVar(this.dataset.id)" style="padding:7px 10px;cursor:pointer;font-size:0.78rem;border-bottom:1px solid var(--border);color:var(--text);">'+
-    '<span class="code-badge" style="margin-right:5px;">'+(c.codigo||'')+'</span>'+esc(c.nome||'Sem nome')+
-    '</div>'
-  ).join('');
-}
 
-function adicionarVar(id){
-  if(!varSelecionados.includes(id))varSelecionados.push(id);
-  document.getElementById('f-var-search').value='';
-  document.getElementById('var-sugestoes').style.display='none';
-  renderVarSelecionados();
-}
-
-function removerVar(id){
-  varSelecionados=varSelecionados.filter(x=>x!==id);
-  renderVarSelecionados();
-}
 
 function renderVarSelecionados(){
   const box=document.getElementById('var-selecionados');
@@ -1817,7 +1768,6 @@ function renderVarSelecionados(){
 
 // ── MIGRAR BIBLIOTECAS ──
 function migrarBibliotecasExistentes(){
-  // always check - run even if bibliotecas has items (might have new criativos)
   let novas=0;
   criativos.forEach(c=>{
     if(!c.linkBiblioteca)return;
@@ -2064,20 +2014,23 @@ function executarUploadCriativo(cr){
   const nicho = cr.nicho || 'Sem Nicho';
   const nomeArquivo = gerarNomeCriativoFromCr(cr, file);
   const renamedFile = new File([file], nomeArquivo, {type: file.type});
-  addToUploadQueue(nomeArquivo, (onProgress) =>
-    uploadVideoToDrive(renamedFile, nicho, 'Criativos', onProgress).then(url => {
-      const idx = criativos.findIndex(x => x.id === crId);
-      if(idx >= 0){
-        criativos[idx].linkAd = url;
-        criativos[idx].sync = false;
-        salvarLocal();
-        if(token) saveDrive();
-        render();
-      }
-      return url;
-    })
-  );
-  return Promise.resolve();
+  return new Promise((resolve) => {
+    addToUploadQueue(nomeArquivo, (onProgress) =>
+      uploadVideoToDrive(renamedFile, nicho, 'Criativos', onProgress).then(url => {
+        // update linkAd in the criativos array
+        const idx = criativos.findIndex(x => x.id === crId);
+        if(idx >= 0){
+          criativos[idx].linkAd = url;
+          criativos[idx].sync = false;
+          salvarLocal();
+          if(token) saveDrive();
+          render();
+        }
+        return url;
+      })
+    );
+    resolve();
+  });
 }
 
 function stageVSLFile(input){
@@ -2164,7 +2117,7 @@ async function loadVSLs(){
     if(!d.files||!d.files.length)return;
     const r2=await fetch('https://www.googleapis.com/drive/v3/files/'+d.files[0].id+'?alt=media',{headers:{Authorization:'Bearer '+token}});
     const data=await r2.json();
-    if(Array.isArray(data)){vsls=data;renderVSLs();}
+    if(Array.isArray(data)){vsls=data;renderVSLs();render();}
   }catch(e){console.error('loadVSLs',e);}
 }
 
@@ -2264,7 +2217,8 @@ function deletarVSL(id){
   const v=vsls.find(x=>x.id===id);if(!v)return;
   confirmar('Remover "'+v.nome+'"?','Essa ação não pode ser desfeita.',async()=>{
     vsls=vsls.filter(x=>x.id!==id);
-    await saveVSLs();renderVSLs();toast('VSL removida ✓');
+    await saveVSLs();
+    renderVSLs();toast('VSL removida ✓');
   });
 }
 
@@ -2350,7 +2304,8 @@ function renderVSLs(){
 }
 
 function verVSL(id){
-  const v=vsls.find(x=>x.id===id);if(!v)return;
+  if(!vsls.length && token){ loadVSLs().then(()=>{ const v=vsls.find(x=>x.id===id);if(v)verVSL(id); }); return; }
+  const v=vsls.find(x=>x.id===id);if(!v){toast('VSL não encontrada. Conecte o Drive.','warn');return;}
   const dt=parseD(v.dataCriacao||'');
   document.getElementById('detail-modal').innerHTML=
     '<div class="dm-left" style="min-height:200px;">'+vidFull(v.linkVideo)+'</div>'+
@@ -2368,7 +2323,8 @@ function verVSL(id){
       (v.mecanismo?'<div class="dm-section"><div class="dm-st">⚡ Mecanismo único</div><div style="font-size:0.78rem;color:var(--text);line-height:1.6;">'+esc(v.mecanismo)+'</div></div>':'')+
       (v.transcricao?'<div class="dm-section"><div class="dm-st">📄 Transcrição</div><div style="font-size:0.74rem;color:var(--text2);line-height:1.7;max-height:220px;overflow-y:auto;white-space:pre-wrap;">'+esc(v.transcricao)+'</div></div>':'')+
       (v.obs?'<div class="dm-section"><div class="dm-st">💬 Observações</div><div style="font-size:0.76rem;color:var(--text2);line-height:1.6;">'+esc(v.obs)+'</div></div>':'')+
-      (()=>{const ctvs=criativos.filter(x=>x.vslId===v.id);return ctvs.length?'<div class="dm-section"><div class="dm-st">🎬 Criativos vinculados</div><div style="display:flex;flex-wrap:wrap;gap:5px;">'+ctvs.map(cx=>'<span class="var-badge" style="cursor:pointer;" onmousedown="fecharDetalhe();setTimeout(()=>abrirDetalhe(\''+cx.id+'\'),50)">'+(cx.codigo?cx.codigo+' ':'')+esc(cx.nome||'?')+'</span>').join('')+'</div></div>':''})()+'<div style="display:flex;gap:8px;margin-top:14px;">'+
+      (()=>{const ctvs=criativos.filter(x=>x.vslId===v.id);return ctvs.length?'<div class="dm-section"><div class="dm-st">🎬 Criativos vinculados</div><div style="display:flex;flex-wrap:wrap;gap:5px;">'+ctvs.map(cx=>'<span class="var-badge" style="cursor:pointer;" onmousedown="fecharDetalhe();setTimeout(()=>abrirDetalhe(\''+cx.id+'\'),50)">'+(cx.codigo?cx.codigo+' ':'')+esc(cx.nome||'?')+'</span>').join('')+'</div></div>':''})()+
+      '<div style="display:flex;gap:8px;margin-top:14px;">'+
         '<button class="bi" style="flex:1" onclick="fecharDetalhe();abrirModalVSL(vsls.find(x=>x.id===\"'+v.id+'\"))">✏️ Editar</button>'+
         '<button class="bi del" style="flex:1" onclick="fecharDetalhe();deletarVSL(\"'+v.id+'\")">🗑️ Remover</button>'+
       '</div>'+
