@@ -755,30 +755,23 @@ function cardHTML(c){
   if(c.linkAd)ls.push(`<a class="lc" href="${c.linkAd}" target="_blank" onclick="event.stopPropagation()">🎬 Vídeo</a>`);
   if(c.linkBiblioteca)ls.push(`<a class="lc" href="${c.linkBiblioteca}" target="_blank" onclick="event.stopPropagation()">📚 Bib.</a>`);
   const onclick=bulkMode?`onclick="toggleSel('${c.id}')"`:`onclick="abrirDetalhe('${c.id}')"`;
-  return`<div class="card" data-id="${c.id}" ${onclick}>${chk}${syncDot}<div class="card-video">${vidLazy(c.linkAd,c.id)}</div><div class="card-body">${nicho}<div class="card-title">${esc(c.nome||'Sem nome')}</div><div class="badges">${bc}${bd}</div><div class="metrics"><div class="metric"><div class="mlb">📋 Cópias total</div><div class="mv">${m.ct||'—'}</div></div><div class="metric"><div class="mlb">📋 Máx/conta</div><div class="mv p">${m.cm||'—'}</div></div><div class="metric"><div class="mlb">🏦 Ads bib.</div><div class="mv">${c.qtdBiblioteca||'—'}</div></div><div class="metric"><div class="mlb">🏢 Contas</div><div class="mv p">${(c.contas||[]).length||'—'}</div></div><div class="metric"><div class="mlb">📅 Veiculação</div><div class="mv s">${m.da?fmt(m.da):'—'}</div></div><div class="metric"><div class="mlb">📅 Dias (cad.)</div><div class="mv ${String(dv).length>3?'s':''}">${dv}</div></div></div>${ls.length?`<div class="card-links">${ls.join('')}</div>`:''}<div class="card-actions"><button class="bi" onclick="event.stopPropagation();editar('${c.id}')">✏️ Editar</button><button class="bi del" onclick="event.stopPropagation();deletar('${c.id}')">🗑️ Remover</button></div></div></div>`;
+  return`<div class="card" data-id="${c.id}" ${onclick}>${chk}${syncDot}<div class="card-video">${vidLazy(c.linkAd)}</div><div class="card-body">${nicho}<div class="card-title">${esc(c.nome||'Sem nome')}</div><div class="badges">${bc}${bd}</div><div class="metrics"><div class="metric"><div class="mlb">📋 Cópias total</div><div class="mv">${m.ct||'—'}</div></div><div class="metric"><div class="mlb">📋 Máx/conta</div><div class="mv p">${m.cm||'—'}</div></div><div class="metric"><div class="mlb">🏦 Ads bib.</div><div class="mv">${c.qtdBiblioteca||'—'}</div></div><div class="metric"><div class="mlb">🏢 Contas</div><div class="mv p">${(c.contas||[]).length||'—'}</div></div><div class="metric"><div class="mlb">📅 Veiculação</div><div class="mv s">${m.da?fmt(m.da):'—'}</div></div><div class="metric"><div class="mlb">📅 Dias (cad.)</div><div class="mv ${String(dv).length>3?'s':''}">${dv}</div></div></div>${ls.length?`<div class="card-links">${ls.join('')}</div>`:''}<div class="card-actions"><button class="bi" onclick="event.stopPropagation();editar('${c.id}')">✏️ Editar</button><button class="bi del" onclick="event.stopPropagation();deletar('${c.id}')">🗑️ Remover</button></div></div></div>`;
 }
 
-function vidLazy(url,id){
+function vidLazy(url){
   if(!url)return`<div class="vph"><div class="icon">🎬</div><span>sem link</span></div>`;
-  if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url)){
-    const cached=thumbCache[id];
-    const thumbHTML=cached
-      ?`<img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" src="${cached}">`
-      :`<div class="thumb-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#08080b;"><div class="vph"><div class="icon">🎬</div></div></div>`;
-    return`<div style="position:relative;width:100%;height:100%;">${thumbHTML}<video
-      style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.3s;"
-      preload="none" muted playsinline
-      onmouseenter="this.setAttribute('src','${url}');this.style.opacity=1;this.play()"
-      onmouseleave="this.style.opacity=0;this.pause();this.currentTime=0;this.removeAttribute('src')"
-    ></video></div>`;
-  }
+  if(url.includes('fbcdn.net')||/\.(mp4|webm|mov)(\?|$)/i.test(url))
+    return`<video preload="none" muted playsinline style="width:100%;height:100%;object-fit:cover;"
+      onmouseenter="if(!this.getAttribute('src')){this.setAttribute('src',this.dataset.url);}this.play()"
+      onmouseleave="this.pause();this.currentTime=0;"
+      data-url="${url}"></video>`;
   if(url.includes('facebook.com')||url.includes('fb.com'))
     return`<div class="vph"><div class="icon">📘</div><span>Meta Ads</span><a href="${url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
   const yt=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
   if(yt)return`<iframe src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen loading="lazy"></iframe>`;
   if(url.includes('tiktok.com'))
-    return`<div class="vph"><div class="icon">🎵</div><span>TikTok</span><a href="${url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
-  return`<div class="vph"><div class="icon">🔗</div><span>link externo</span><a href="${url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
+    return`<div class="vph"><div class="icon">🎵</div><span>TikTok</span><a href="" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
+  return`<div class="vph"><div class="icon">🔗</div><span>link externo</span><a href="" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
 }
 
 
