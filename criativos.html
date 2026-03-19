@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banco de Criativos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0f;
+    --surface: #15151a;
+    --surface2: #1e1e26;
+    --border: #2a2a38;
+    --accent: #c8f542;
+    --accent2: #7b5cfa;
+    --text: #f0f0f5;
+    --text2: #888899;
+    --red: #ff4d6d;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+  header {
+    padding: 16px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; letter-spacing: -0.03em; }
+  .logo span { color: var(--accent); }
+  .stats-bar { display: flex; gap: 20px; font-size: 0.68rem; color: var(--text2); }
+  .stats-bar strong { color: var(--accent); font-size: 0.95rem; display: block; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .btn-add { background: var(--accent); color: #0c0c0f; border: none; padding: 9px 18px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+  .btn-add:hover { background: #d8ff55; transform: translateY(-1px); }
+
+  main { padding: 24px 28px; max-width: 1500px; margin: 0 auto; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .search-box { flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+  .search-box:focus { border-color: var(--accent2); }
+  .search-box::placeholder { color: var(--text2); }
+  .filter-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text2); padding: 8px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.76rem; cursor: pointer; transition: all 0.2s; }
+  .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: var(--accent); }
+  .btn-fa-toggle { background: var(--surface); border: 1px solid var(--border); color: var(--text2); padding: 8px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.76rem; cursor: pointer; transition: all 0.2s; }
+  .btn-fa-toggle:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-fa-toggle.open { border-color: var(--accent2); color: var(--accent2); background: rgba(123,92,250,0.08); }
+  .filtro-badge { background: rgba(123,92,250,0.15); border: 1px solid var(--accent2); color: var(--accent2); font-size: 0.68rem; padding: 4px 10px; border-radius: 20px; display: none; }
+  .filtro-badge.show { display: inline-block; }
+
+  .filtros-avancados { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; display: none; }
+  .filtros-avancados.open { display: block; }
+  .fa-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .fa-title { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; }
+  .op-row { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text2); }
+  .op-btn { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--text2); font-family: 'DM Mono', monospace; font-size: 0.72rem; cursor: pointer; transition: all 0.15s; }
+  .op-btn.active { background: var(--accent2); border-color: var(--accent2); color: white; }
+  .fa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .fa-field label { display: block; font-size: 0.66rem; color: var(--text2); margin-bottom: 4px; }
+  .fa-field input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.8rem; outline: none; transition: border-color 0.2s; }
+  .fa-field input:focus { border-color: var(--accent2); }
+  .fa-field input::placeholder { color: var(--text2); }
+  .fa-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-aplicar { background: var(--accent2); color: white; border: none; padding: 7px 16px; border-radius: 7px; font-family: 'DM Mono', monospace; font-size: 0.78rem; cursor: pointer; }
+  .btn-aplicar:hover { background: #9175ff; }
+  .btn-limpar { background: none; border: 1px solid var(--border); color: var(--text2); padding: 7px 14px; border-radius: 7px; font-family: 'DM Mono', monospace; font-size: 0.78rem; cursor: pointer; }
+  .btn-limpar:hover { border-color: var(--red); color: var(--red); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: all 0.25s; animation: fadeIn 0.3s ease; }
+  .card:hover { border-color: var(--accent2); transform: translateY(-2px); box-shadow: 0 6px 24px rgba(123,92,250,0.12); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  .card-video { width: 100%; height: 155px; background: #08080b; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .card-video video { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+  .card-video iframe { width: 100%; height: 100%; border: none; }
+  .video-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text2); font-size: 0.7rem; }
+  .video-placeholder .icon { font-size: 1.5rem; }
+
+  .card-body { padding: 11px 13px; }
+  .card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.86rem; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .badges-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+  .badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.61rem; padding: 2px 7px; border-radius: 20px; }
+  .badge-sim { background: rgba(200,245,66,0.1); color: var(--accent); border: 1px solid rgba(200,245,66,0.3); }
+  .badge-nao { background: rgba(136,136,153,0.1); color: var(--text2); border: 1px solid var(--border); }
+  .badge-data { background: rgba(123,92,250,0.1); color: var(--accent2); border: 1px solid rgba(123,92,250,0.3); }
+
+  .metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 9px; }
+  .metric { background: var(--surface2); border-radius: 7px; padding: 6px 8px; }
+  .metric-label { font-size: 0.56rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; line-height: 1.3; }
+  .metric-value { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.92rem; color: var(--accent); }
+  .metric-value.purple { color: var(--accent2); }
+  .metric-value.sm { font-size: 0.75rem; }
+
+  .links-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+  .link-chip { font-size: 0.62rem; padding: 3px 8px; border-radius: 6px; background: var(--surface2); color: var(--accent2); text-decoration: none; border: 1px solid transparent; transition: all 0.15s; }
+  .link-chip:hover { border-color: var(--accent2); background: rgba(123,92,250,0.1); }
+  .link-chip.dl { color: var(--accent); }
+  .link-chip.dl:hover { border-color: var(--accent); background: rgba(200,245,66,0.08); }
+
+  .card-actions { display: flex; gap: 5px; border-top: 1px solid var(--border); padding-top: 9px; margin-top: 3px; }
+  .btn-icon { background: none; border: 1px solid var(--border); color: var(--text2); padding: 5px 10px; border-radius: 6px; font-size: 0.68rem; cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; flex: 1; }
+  .btn-icon:hover { border-color: var(--text2); color: var(--text); }
+  .btn-del:hover { border-color: var(--red); color: var(--red); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text2); grid-column: 1/-1; }
+  .empty-state .big { font-size: 2.5rem; margin-bottom: 10px; }
+  .empty-state p { font-size: 0.82rem; line-height: 1.6; }
+
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; padding: 24px; animation: slideUp 0.22s ease; }
+  @keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; }
+  .btn-close { background: none; border: none; color: var(--text2); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+  .btn-close:hover { color: var(--text); }
+
+  .form-section { margin-bottom: 18px; }
+  .form-section-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent2); margin-bottom: 10px; font-weight: 500; }
+  .form-group { margin-bottom: 11px; }
+  label { display: block; font-size: 0.71rem; color: var(--text2); margin-bottom: 5px; }
+  input[type="text"], input[type="number"], input[type="url"], textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.8rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus { border-color: var(--accent2); }
+  input::placeholder, textarea::placeholder { color: var(--text2); }
+  textarea { resize: vertical; min-height: 55px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .toggle-label { font-size: 0.78rem; }
+  .toggle { width: 40px; height: 22px; background: var(--border); border-radius: 11px; position: relative; cursor: pointer; transition: background 0.2s; border: none; outline: none; }
+  .toggle.on { background: var(--accent); }
+  .toggle::after { content:''; position:absolute; width:16px; height:16px; background:white; border-radius:50%; top:3px; left:3px; transition:left 0.2s; }
+  .toggle.on::after { left:21px; }
+  .btn-save { width:100%; background:var(--accent); color:#0c0c0f; border:none; padding:12px; border-radius:8px; font-family:'Syne',sans-serif; font-weight:700; font-size:0.92rem; cursor:pointer; margin-top:6px; transition:all 0.2s; }
+  .btn-save:hover { background:#d8ff55; }
+  .conta-item { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px; position:relative; }
+  .btn-rm-conta { position:absolute; top:7px; right:8px; background:none; border:none; color:var(--text2); cursor:pointer; font-size:1rem; line-height:1; }
+  .btn-rm-conta:hover { color:var(--red); }
+  .btn-add-conta { width:100%; background:none; border:1px dashed var(--border); color:var(--text2); padding:8px; border-radius:8px; font-family:'DM Mono',monospace; font-size:0.75rem; cursor:pointer; transition:all 0.2s; margin-top:4px; }
+  .btn-add-conta:hover { border-color:var(--accent2); color:var(--accent2); }
+  .date-hint { font-size: 0.63rem; color: var(--accent); margin-top: 3px; min-height: 13px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">criativo<span>db</span></div>
+  <div class="stats-bar">
+    <div><strong id="stat-total">0</strong>criativos</div>
+    <div><strong id="stat-contas">0</strong>contas</div>
+  </div>
+  <button class="btn-add" onclick="abrirModal()">+ Adicionar</button>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input type="text" class="search-box" placeholder="Buscar..." oninput="render()" id="search-input">
+    <button class="filter-btn active" onclick="setFiltro('todos',this)">Todos</button>
+    <button class="filter-btn" onclick="setFiltro('varias',this)">Várias contas</button>
+    <button class="filter-btn" onclick="setFiltro('unica',this)">Conta única</button>
+    <button class="btn-fa-toggle" id="btn-fa" onclick="toggleFA()">⚙ Filtros avançados</button>
+    <span class="filtro-badge" id="filtro-badge"></span>
+  </div>
+
+  <div class="filtros-avancados" id="fa-panel">
+    <div class="fa-top">
+      <span class="fa-title">Filtros avançados</span>
+      <div class="op-row">
+        Combinar por:
+        <button class="op-btn active" id="op-e" onclick="setOp('E')">E</button>
+        <button class="op-btn" id="op-ou" onclick="setOp('OU')">OU</button>
+      </div>
+    </div>
+    <div class="fa-grid">
+      <div class="fa-field"><label>Cópias mín. por conta</label><input type="number" id="fa-cop-conta" placeholder="ex: 10" min="0" oninput="render()"></div>
+      <div class="fa-field"><label>Cópias mín. total</label><input type="number" id="fa-cop-total" placeholder="ex: 50" min="0" oninput="render()"></div>
+      <div class="fa-field"><label>Ads na biblioteca mín.</label><input type="number" id="fa-ads-bib" placeholder="ex: 1000" min="0" oninput="render()"></div>
+      <div class="fa-field"><label>Nº de contas mín.</label><input type="number" id="fa-n-contas" placeholder="ex: 3" min="0" oninput="render()"></div>
+      <div class="fa-field"><label>Dias ativos (cadastro) mín.</label><input type="number" id="fa-dias-cad" placeholder="ex: 30" min="0" oninput="render()"></div>
+      <div class="fa-field"><label>Dias ativos (hoje) mín.</label><input type="number" id="fa-dias-hoje" placeholder="ex: 60" min="0" oninput="render()"></div>
+    </div>
+    <div class="fa-actions">
+      <button class="btn-limpar" onclick="limparFA()">Limpar filtros</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="overlay" id="overlay" onclick="fecharFora(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Novo Criativo</div>
+      <button class="btn-close" onclick="fecharModal()">×</button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📌 Identificação</div>
+      <div class="form-group">
+        <label>Nome / apelido</label>
+        <input type="text" id="f-nome" placeholder="Ex: Criativo botinha out...">
+      </div>
+      <div class="form-group">
+        <label>Link do vídeo / anúncio principal</label>
+        <input type="url" id="f-link-ad" placeholder="https://...">
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📚 Biblioteca</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Link da biblioteca</label>
+          <input type="url" id="f-link-bib" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Qtd de ads</label>
+          <input type="number" id="f-qtd-bib" placeholder="0" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📊 Contas</div>
+      <div class="toggle-row" style="margin-bottom:12px">
+        <span class="toggle-label">Aparece em múltiplas contas</span>
+        <button class="toggle" id="toggle-contas" onclick="toggleContas()"></button>
+      </div>
+      <div id="contas-container"></div>
+      <button class="btn-add-conta" onclick="addConta()">+ Adicionar conta</button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📝 Observações</div>
+      <textarea id="f-obs" placeholder="Qualquer anotação..."></textarea>
+    </div>
+
+    <button class="btn-save" onclick="salvar()">Salvar criativo ✓</button>
+  </div>
+</div>
+
+<script>
+let criativos = JSON.parse(localStorage.getItem('criativosdb3') || '[]');
+let filtroAtivo = 'todos';
+let editandoId = null;
+let variasContas = false;
+let contas = [];
+let operador = 'E';
+let faAberto = false;
+
+function salvarStorage() { localStorage.setItem('criativosdb3', JSON.stringify(criativos)); }
+
+// ── DATA ──
+function parseData(str) {
+  if (!str) return null;
+  str = str.trim();
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (!m) return null;
+  let [, d, mo, a] = m;
+  d = parseInt(d); mo = parseInt(mo);
+  if (!a) a = 2026;
+  else if (String(a).length <= 2) a = 2000 + parseInt(a);
+  else a = parseInt(a);
+  const dt = new Date(a, mo - 1, d);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+function diasEntre(d1, d2) {
+  if (!d1 || !d2) return null;
+  return Math.max(0, Math.round((d2 - d1) / 86400000));
+}
+function fmtData(dt) {
+  if (!dt) return null;
+  return dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function hintData(str) {
+  if (!str) return '';
+  const dt = parseData(str);
+  return dt ? '✓ ' + fmtData(dt) : '⚠ data inválida';
+}
+
+// ── MÉTRICAS ──
+function calcM(c) {
+  const copTotal = (c.contas||[]).reduce((s,ct) => s + (parseInt(ct.copias)||0), 0);
+  const copMax = (c.contas||[]).reduce((s,ct) => Math.max(s, parseInt(ct.copias)||0), 0);
+  let dtMaisAntiga = null;
+  for (const ct of (c.contas||[])) {
+    const dt = parseData(ct.dataVeiculacao);
+    if (dt && (!dtMaisAntiga || dt < dtMaisAntiga)) dtMaisAntiga = dt;
+  }
+  const dtCad = c.criadoEm ? new Date(c.criadoEm) : null;
+  const hoje = new Date();
+  return {
+    copTotal, copMax, dtMaisAntiga,
+    diasCad: diasEntre(dtMaisAntiga, dtCad),
+    diasHoje: diasEntre(dtMaisAntiga, hoje)
+  };
+}
+
+// ── FILTROS AVANÇADOS ──
+function getFAV() {
+  return {
+    copConta: parseInt(document.getElementById('fa-cop-conta').value)||null,
+    copTotal: parseInt(document.getElementById('fa-cop-total').value)||null,
+    adsBib: parseInt(document.getElementById('fa-ads-bib').value)||null,
+    nContas: parseInt(document.getElementById('fa-n-contas').value)||null,
+    diasCad: parseInt(document.getElementById('fa-dias-cad').value)||null,
+    diasHoje: parseInt(document.getElementById('fa-dias-hoje').value)||null,
+  };
+}
+function faAtivo() { return Object.values(getFAV()).some(x => x !== null); }
+function passaFA(c) {
+  const v = getFAV(); const m = calcM(c);
+  const checks = [];
+  if (v.copConta !== null) checks.push(m.copMax >= v.copConta);
+  if (v.copTotal !== null) checks.push(m.copTotal >= v.copTotal);
+  if (v.adsBib !== null) checks.push((parseInt(c.qtdBiblioteca)||0) >= v.adsBib);
+  if (v.nContas !== null) checks.push((c.contas||[]).length >= v.nContas);
+  if (v.diasCad !== null) checks.push(m.diasCad !== null && m.diasCad >= v.diasCad);
+  if (v.diasHoje !== null) checks.push(m.diasHoje !== null && m.diasHoje >= v.diasHoje);
+  if (!checks.length) return true;
+  return operador === 'E' ? checks.every(Boolean) : checks.some(Boolean);
+}
+function setOp(op) {
+  operador = op;
+  document.getElementById('op-e').classList.toggle('active', op==='E');
+  document.getElementById('op-ou').classList.toggle('active', op==='OU');
+  render();
+}
+function toggleFA() {
+  faAberto = !faAberto;
+  document.getElementById('fa-panel').classList.toggle('open', faAberto);
+  document.getElementById('btn-fa').classList.toggle('open', faAberto);
+}
+function limparFA() {
+  ['fa-cop-conta','fa-cop-total','fa-ads-bib','fa-n-contas','fa-dias-cad','fa-dias-hoje'].forEach(id => document.getElementById(id).value = '');
+  render();
+}
+
+// ── RENDER ──
+function render() {
+  const grid = document.getElementById('grid');
+  const search = document.getElementById('search-input').value.toLowerCase();
+  let lista = criativos.filter(c => {
+    const ms = !search || c.nome.toLowerCase().includes(search) || (c.obs||'').toLowerCase().includes(search);
+    const mf = filtroAtivo==='todos' || (filtroAtivo==='varias' && c.variasContas) || (filtroAtivo==='unica' && !c.variasContas);
+    const mfa = !faAtivo() || passaFA(c);
+    return ms && mf && mfa;
+  });
+
+  document.getElementById('stat-total').textContent = criativos.length;
+  const cts = new Set();
+  criativos.forEach(c => (c.contas||[]).forEach(ct => { if(ct.linkAnuncio) cts.add(ct.linkAnuncio); }));
+  document.getElementById('stat-contas').textContent = cts.size;
+
+  const badge = document.getElementById('filtro-badge');
+  if (faAtivo()) { badge.textContent = `🔍 ${lista.length} resultado${lista.length!==1?'s':''}`; badge.classList.add('show'); }
+  else badge.classList.remove('show');
+
+  if (!lista.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="big">🔍</div><p>Nenhum criativo encontrado.</p></div>`;
+    return;
+  }
+  grid.innerHTML = lista.map(c => cardHTML(c)).join('');
+}
+
+function cardHTML(c) {
+  const m = calcM(c);
+  const dtCad = c.criadoEm ? new Date(c.criadoEm) : null;
+
+  const badgeContas = c.variasContas
+    ? `<span class="badge badge-sim">🔁 ${(c.contas||[]).length} contas</span>`
+    : `<span class="badge badge-nao">1 conta</span>`;
+  const badgeDt = m.dtMaisAntiga ? `<span class="badge badge-data">📅 ${fmtData(m.dtMaisAntiga)}</span>` : '';
+  const badgeCad = dtCad ? `<span class="badge badge-nao">📥 ${fmtData(dtCad)}</span>` : '';
+
+  const links = [];
+  if (c.linkAd) {
+    links.push(`<a class="link-chip" href="${c.linkAd}" target="_blank">🎬 Vídeo</a>`);
+    if (c.linkAd.includes('fbcdn.net') || /\.(mp4|webm|mov)(\?|$)/i.test(c.linkAd))
+      links.push(`<a class="link-chip dl" href="${c.linkAd}" download>⬇ Download</a>`);
+  }
+  if (c.linkBiblioteca) links.push(`<a class="link-chip" href="${c.linkBiblioteca}" target="_blank">📚 Bib.</a>`);
+  (c.contas||[]).forEach((ct,i) => {
+    if (ct.linkAnuncio) links.push(`<a class="link-chip" href="${ct.linkAnuncio}" target="_blank">🏢 Conta ${i+1}</a>`);
+  });
+
+  const diasCadVal = m.diasCad !== null ? m.diasCad : '—';
+  const diasHojeVal = m.diasHoje !== null ? m.diasHoje : '—';
+
+  return `<div class="card">
+    <div class="card-video">${getVideo(c.linkAd)}</div>
+    <div class="card-body">
+      <div class="card-title">${esc(c.nome||'Sem nome')}</div>
+      <div class="badges-row">${badgeContas}${badgeDt}${badgeCad}</div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">📋 Cópias total</div><div class="metric-value">${m.copTotal||'—'}</div></div>
+        <div class="metric"><div class="metric-label">📅 Dias (cad.)</div><div class="metric-value purple ${String(diasCadVal).length>3?'sm':''}">${diasCadVal}</div></div>
+        <div class="metric"><div class="metric-label">📅 Dias (hoje)</div><div class="metric-value ${String(diasHojeVal).length>3?'sm':''}">${diasHojeVal}</div></div>
+        <div class="metric"><div class="metric-label">🏦 Ads bib.</div><div class="metric-value purple">${c.qtdBiblioteca||'—'}</div></div>
+        <div class="metric"><div class="metric-label">🏢 Contas</div><div class="metric-value">${(c.contas||[]).length||'—'}</div></div>
+        <div class="metric"><div class="metric-label">📋 Máx/conta</div><div class="metric-value purple">${m.copMax||'—'}</div></div>
+      </div>
+      ${links.length?`<div class="links-row">${links.join('')}</div>`:''}
+      ${c.obs?`<div style="font-size:0.68rem;color:var(--text2);margin-bottom:7px;line-height:1.5;">${esc(c.obs)}</div>`:''}
+      <div class="card-actions">
+        <button class="btn-icon" onclick="editar('${c.id}')">✏️ Editar</button>
+        <button class="btn-icon btn-del" onclick="deletar('${c.id}')">🗑️ Remover</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function getVideo(url) {
+  if (!url) return `<div class="video-placeholder"><div class="icon">🎬</div><span>sem link</span></div>`;
+  if (url.includes('fbcdn.net') || /\.(mp4|webm|mov)(\?|$)/i.test(url))
+    return `<video src="${url}" preload="metadata" muted playsinline style="width:100%;height:100%;object-fit:cover;cursor:pointer" onmouseover="this.play()" onmouseout="this.pause();this.currentTime=0"></video>`;
+  if (url.includes('facebook.com')||url.includes('fb.com'))
+    return `<div class="video-placeholder"><div class="icon">📘</div><span>Meta Ads</span><a href="${url}" target="_blank" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (yt) return `<iframe src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen></iframe>`;
+  if (url.includes('tiktok.com'))
+    return `<div class="video-placeholder"><div class="icon">🎵</div><span>TikTok</span><a href="${url}" target="_blank" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
+  return `<div class="video-placeholder"><div class="icon">🔗</div><span>link externo</span><a href="${url}" target="_blank" style="color:var(--accent2);font-size:0.63rem;margin-top:3px;">Abrir ↗</a></div>`;
+}
+
+// ── FILTROS SIMPLES ──
+function setFiltro(f, btn) {
+  filtroAtivo = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+// ── MODAL ──
+function abrirModal(c=null) {
+  editandoId = c ? c.id : null;
+  variasContas = c ? c.variasContas : false;
+  contas = c ? JSON.parse(JSON.stringify(c.contas||[{linkAnuncio:'',copias:'',dataVeiculacao:''}]))
+              : [{linkAnuncio:'',copias:'',dataVeiculacao:''}];
+  document.getElementById('modal-title').textContent = c ? 'Editar Criativo' : 'Novo Criativo';
+  document.getElementById('f-nome').value = c ? c.nome : '';
+  document.getElementById('f-link-ad').value = c ? c.linkAd : '';
+  document.getElementById('f-link-bib').value = c ? c.linkBiblioteca : '';
+  document.getElementById('f-qtd-bib').value = c ? c.qtdBiblioteca : '';
+  document.getElementById('f-obs').value = c ? c.obs : '';
+  document.getElementById('toggle-contas').classList.toggle('on', variasContas);
+  renderContas();
+  document.getElementById('overlay').classList.add('open');
+}
+function fecharModal() { document.getElementById('overlay').classList.remove('open'); editandoId = null; }
+function fecharFora(e) { if (e.target===document.getElementById('overlay')) fecharModal(); }
+function toggleContas() { variasContas=!variasContas; document.getElementById('toggle-contas').classList.toggle('on',variasContas); }
+function addConta() { contas.push({linkAnuncio:'',copias:'',dataVeiculacao:''}); renderContas(); }
+function removeConta(i) { if(contas.length<=1)return; contas.splice(i,1); renderContas(); }
+function atualizarData(i, val) {
+  contas[i].dataVeiculacao = val;
+  const el = document.getElementById(`hint-${i}`);
+  if (el) el.textContent = hintData(val);
+}
+function renderContas() {
+  document.getElementById('contas-container').innerHTML = contas.map((c,i) => `
+    <div class="conta-item">
+      ${contas.length>1?`<button class="btn-rm-conta" onclick="removeConta(${i})">×</button>`:''}
+      <div style="font-size:0.62rem;color:var(--accent2);margin-bottom:8px;font-weight:500;">CONTA ${i+1}</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Link do anúncio</label>
+          <input type="url" value="${c.linkAnuncio||''}" oninput="contas[${i}].linkAnuncio=this.value" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Nº de cópias</label>
+          <input type="number" value="${c.copias||''}" oninput="contas[${i}].copias=this.value" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data de veiculação (D/M, D/M/AA ou D/M/AAAA)</label>
+        <input type="text" value="${c.dataVeiculacao||''}" oninput="atualizarData(${i},this.value)" placeholder="ex: 5/3 ou 5/3/25">
+        <div class="date-hint" id="hint-${i}">${hintData(c.dataVeiculacao||'')}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── CRUD ──
+function salvar() {
+  const nome = document.getElementById('f-nome').value.trim();
+  if (!nome) { alert('Coloca pelo menos um nome!'); return; }
+  const criativo = {
+    id: editandoId || Date.now().toString(),
+    nome,
+    linkAd: document.getElementById('f-link-ad').value.trim(),
+    linkBiblioteca: document.getElementById('f-link-bib').value.trim(),
+    qtdBiblioteca: document.getElementById('f-qtd-bib').value,
+    variasContas,
+    contas: JSON.parse(JSON.stringify(contas)),
+    obs: document.getElementById('f-obs').value.trim(),
+    criadoEm: editandoId ? (criativos.find(c=>c.id===editandoId)||{}).criadoEm : new Date().toISOString()
+  };
+  if (editandoId) { const idx=criativos.findIndex(c=>c.id===editandoId); criativos[idx]=criativo; }
+  else criativos.unshift(criativo);
+  salvarStorage(); fecharModal(); render();
+}
+function editar(id) { const c=criativos.find(x=>x.id===id); if(c) abrirModal(c); }
+function deletar(id) { if(!confirm('Remover esse criativo?'))return; criativos=criativos.filter(c=>c.id!==id); salvarStorage(); render(); }
+
+render();
+</script>
+</body>
+</html>
