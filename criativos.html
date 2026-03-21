@@ -770,12 +770,11 @@ async function loadDrive(){
       // add unsynced local items not in drive
       localUnsynced.forEach(lu=>{if(!criativos.find(c=>c.id===lu.id))criativos.push(lu);});
       gerarCodigosFaltantes();
-      migrarBibliotecasExistentes();
       render();
       toast(criativos.length+' criativos carregados ✓');
     }
     setDrive('connected','Drive conectado ✓');
-    loadDriveBibs();
+    loadDriveBibs().then(()=>migrarBibliotecasExistentes());
     if(typeof loadVSLs==='function')loadVSLs();
     // clear localStorage cache after successful Drive sync
     setTimeout(()=>{
@@ -1875,7 +1874,11 @@ function migrarBibliotecasExistentes(){
     });
     novas++;
   });
-  if(novas){if(token)saveDriveBibs();else salvarBibs();renderBibliotecas();}
+  if(novas){
+    renderBibliotecas();
+    if(token) saveDriveBibs().catch(e=>console.error('migrar save',e));
+    else salvarBibs();
+  }
 }
 
 // ── SORT BIBLIOTECAS ──
