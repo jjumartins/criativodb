@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CriativoDB</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='22' font-family='Syne,sans-serif' font-weight='800' fill='%23c8f542'>db</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='22' font-family='Syne,sans-serif' font-weight='800' fill='%23c8f542'>db</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0c0c0f;--surface:#15151a;--surface2:#1e1e26;--border:#2a2a38;--accent:#c8f542;--accent2:#7b5cfa;--text:#f0f0f5;--text2:#888899;--red:#ff4d6d;--yellow:#f5c842;--radius:12px;}
@@ -726,7 +727,7 @@ function driveAction(){
         await loadDrive();
         // sync unsync items
         const unsynced=criativos.filter(c=>!c.sync);
-        if(unsynced.length){await saveDrive();criativos.forEach(c=>c.sync=true);salvarLocal();}
+        if(unsynced.length){await saveDrive();criativos.forEach(c=>c.sync=true);}
       }
     });
   }
@@ -769,7 +770,7 @@ async function loadDrive(){
       localUnsynced.forEach(lu=>{if(!criativos.find(c=>c.id===lu.id))criativos.push(lu);});
       gerarCodigosFaltantes();
       migrarBibliotecasExistentes();
-      salvarLocal();render();
+      render();
       toast(criativos.length+' criativos carregados ✓');
     }
     setDrive('connected','Drive conectado ✓');
@@ -803,7 +804,7 @@ async function saveDrive(){
       const dd=await r.json();fileId=dd.id;
     }
     criativos.forEach(c=>c.sync=true);
-    salvarLocal();render();
+    render();
     setDrive('connected','Drive conectado ✓');
     toast('Salvo no Drive ✓');
   }catch(e){setDrive('connected','Drive conectado ✓');toast('Erro ao salvar no Drive','err');}
@@ -990,7 +991,7 @@ function toggleSel(id){
   }
   document.getElementById('bulk-count').textContent=selecionados.size;
 }
-function deletarSelecionados(){if(!selecionados.size)return;confirmar(`Deletar ${selecionados.size} criativo${selecionados.size>1?'s':''}?`,'Essa ação não pode ser desfeita.',()=>{criativos=criativos.filter(c=>!selecionados.has(c.id));selecionados.clear();salvarLocal();if(token)saveDrive();toggleBulk();toast('Criativos removidos ✓');});}
+function deletarSelecionados(){if(!selecionados.size)return;confirmar(`Deletar ${selecionados.size} criativo${selecionados.size>1?'s':''}?`,'Essa ação não pode ser desfeita.',()=>{criativos=criativos.filter(c=>!selecionados.has(c.id));selecionados.clear();if(token)saveDrive();else salvarLocal();toggleBulk();toast('Criativos removidos ✓');});}
 
 // ── CONFIRM ──
 let confirmCb=null;
@@ -1522,7 +1523,7 @@ function deletar(id){
   const c=criativos.find(x=>x.id===id);if(!c)return;
   confirmar(`Remover "${c.nome}"?`,'Essa ação não pode ser desfeita.',()=>{
     criativos=criativos.filter(x=>x.id!==id);
-    salvarLocal();if(token)saveDrive();
+    if(token)saveDrive();else salvarLocal();
     render();toast('Criativo removido ✓');
   });
 }
@@ -2171,7 +2172,7 @@ async function uploadPIFile(input,id){
       status.textContent=p+'%';
     });
     c.linkAd=url;c.sync=false;
-    salvarLocal();if(token)saveDrive();
+    if(token)saveDrive();else salvarLocal();
     status.style.color='var(--accent)';status.textContent='✓';
     const row=document.getElementById('pi-row-'+id);
     if(row){
