@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CriativoDB</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='22' font-family='Syne,sans-serif' font-weight='800' fill='%23c8f542'>db</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0c0c0f;--surface:#15151a;--surface2:#1e1e26;--border:#2a2a38;--accent:#c8f542;--accent2:#7b5cfa;--text:#f0f0f5;--text2:#888899;--red:#ff4d6d;--yellow:#f5c842;--radius:12px;}
@@ -499,6 +500,10 @@ textarea{resize:vertical;min-height:52px;}
         </div>
         <div id="criativo-upload-bar" style="display:none;margin-top:6px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
           <div id="criativo-upload-progress" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div id="criativo-rename-wrap" style="display:none;margin-top:6px;">
+          <button class="tbtn" type="button" onclick="renomearVideoNoDrive(editId)" style="font-size:0.7rem;">✏️ Renomear arquivo no Drive</button>
+          <span style="font-size:0.65rem;color:var(--text2);margin-left:8px;">atualiza o nome com as métricas atuais</span>
         </div>
       </div>
       <div class="fg">
@@ -1029,14 +1034,16 @@ function importarJSON(input){
         importados++;
       });
 
-      salvarLocal();
-      if(token) saveDrive();
+      if(token) saveDrive(); else salvarLocal();
       gerarCodigosFaltantes();
       const novasBibs=importarBibliotecasDoJSON(lista);
       render();
       const bibMsg=novasBibs?' + '+novasBibs+' biblioteca'+(novasBibs>1?'s':''):'';
       toast(importados + ' criativo' + (importados !== 1 ? 's' : '') + bibMsg + ' importado' + (importados !== 1 ? 's' : '') + ' ✓');
       input.value = '';
+      // open post-import modal for video uploads
+      const newIds = criativos.slice(0, importados).map(c => c.id);
+      if(newIds.length) setTimeout(() => abrirPostImport(newIds), 600);
     } catch(err) {
       toast('Erro ao ler JSON: ' + err.message, 'err');
     }
@@ -1417,6 +1424,9 @@ function abrirModal(c=null){
   renderVarSelecionados();
   renderC();
   const fw=document.getElementById('form-drive-warn');if(fw)fw.style.display='none';
+  // show rename button only when editing and has Drive link
+  const rw=document.getElementById('criativo-rename-wrap');
+  if(rw) rw.style.display=(c&&c.linkAd&&c.linkAd.includes('drive.google.com')&&token)?'block':'none';
   // load VSL selection
   limparVSLSelecionada();
   if(c&&c.vslId){selecionarVSL(c.vslId);}
@@ -1990,6 +2000,35 @@ async function uploadVideoToDrive(file,nicho,tipo,onProgress){
 // staged files - upload happens on save
 let _stagedCriativoFile = null;
 let _stagedVSLFile = null;
+
+// ── RENOMEAR VÍDEO NO DRIVE ──
+async function renomearVideoNoDrive(criativoId){
+  const c = criativos.find(x=>x.id===criativoId);
+  if(!c||!c.linkAd){ toast('Criativo sem vídeo vinculado','warn'); return; }
+  if(!token){ toast('Conecte o Drive para renomear','warn'); return; }
+  // extract file ID from Drive URL
+  const m = c.linkAd.match(/[?&]id=([^&]+)/);
+  if(!m){ toast('Link não é do Drive','warn'); return; }
+  const fileId = m[1];
+  // build new name from criativo data
+  const m2 = calcM(c);
+  let partes = [];
+  if(c.nicho) partes.push(c.nicho);
+  if(m2.ct) partes.push(m2.ct+' copias');
+  if(m2.dh) partes.push(m2.dh+' dias');
+  if(c.qtdBiblioteca) partes.push(c.qtdBiblioteca+' adlib');
+  if(c.variasContas) partes.push('varias contas');
+  const novoNome = (partes.join(' - ')||c.nome) + '.mp4';
+  try{
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/'+fileId, {
+      method:'PATCH',
+      headers:{ Authorization:'Bearer '+token, 'Content-Type':'application/json' },
+      body: JSON.stringify({ name: novoNome })
+    });
+    if(r.ok){ toast('Renomeado: '+novoNome+' ✓'); }
+    else{ toast('Erro ao renomear','err'); }
+  }catch(e){ toast('Erro: '+e.message,'err'); }
+}
 
 // ── UPLOAD QUEUE (background) ──
 const uploadQueue = [];
