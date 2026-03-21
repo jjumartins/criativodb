@@ -833,19 +833,30 @@ async function saveDriveBibs(){
   if(!token)return;
   try{
     const content=JSON.stringify(bibliotecas);
-    const r=await fetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='bibsdb.json'&fields=files(id)",{headers:{Authorization:'Bearer '+token}});
+    const r=await dreq('GET',"https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='bibsdb.json'&fields=files(id)");
     const d=await r.json();
     const fid=d.files&&d.files.length?d.files[0].id:null;
     if(fid){
-      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fid+'?uploadType=media',{method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:content});
+      const r2=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fid+'?uploadType=media',{
+        method:'PATCH',
+        headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+        body:content
+      });
+      if(!r2.ok)throw new Error('PATCH falhou: '+r2.status);
     }else{
       const meta={name:'bibsdb.json',parents:['appDataFolder']};
       const f=new FormData();
       f.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
       f.append('file',new Blob([content],{type:'application/json'}));
-      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+token},body:f});
+      const r2=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+        method:'POST',headers:{Authorization:'Bearer '+token},body:f
+      });
+      if(!r2.ok)throw new Error('POST falhou: '+r2.status);
     }
-  }catch(e){console.error('saveDriveBibs',e);}
+  }catch(e){
+    console.error('saveDriveBibs',e);
+    toast('Erro ao salvar bibliotecas no Drive: '+e.message,'err');
+  }
 }
 
 async function loadDriveBibs(){
